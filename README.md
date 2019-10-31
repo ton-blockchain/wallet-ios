@@ -1,6 +1,6 @@
 # Test Gram Wallet (iOS)
 
-This is the complete source code and build instructions for the TON Blockchain testnet iOS client.
+This is the complete source code and build instructions for the TON Blockchain testnet iOS wallet.
 
 1. Install Xcode 11.1
 ```
