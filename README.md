@@ -31,9 +31,13 @@ sh ./prepare_buck_source.sh $HOME/buck_source
 5. Now you can build Wallet application (IPA)
 
 Note:
-It is recommended to use an artifact cache to optimize build speed. Prepend any of the following commands with BUCK_DIR_CACHE="path/to/existing/directory"
+It is recommended to use an artifact cache to optimize build speed. Prepend any of the following commands with
+```
+BUCK_DIR_CACHE="path/to/existing/directory"
+```
 
-```BUCK="$HOME/buck_source/buck/buck-out/gen/programs/buck.pex" DISTRIBUTION_CODE_SIGN_IDENTITY="iPhone Distribution: XXXXXXX (XXXXXXXXXX)" DEVELOPMENT_TEAM="XXXXXXXXXX" WALLET_BUNDLE_ID="wallet.bundle.id" BUILD_NUMBER=30 WALLET_DISTRIBUTION_PROVISIONING_PROFILE_APP="wallet provisioning profile name" CODESIGNING_SOURCE_DATA_PATH="$HOME/wallet_codesigning" sh Wallet/example_wallet_env.sh make -f Wallet.makefile wallet_app
+```
+BUCK="$HOME/buck_source/buck/buck-out/gen/programs/buck.pex" DISTRIBUTION_CODE_SIGN_IDENTITY="iPhone Distribution: XXXXXXX (XXXXXXXXXX)" DEVELOPMENT_TEAM="XXXXXXXXXX" WALLET_BUNDLE_ID="wallet.bundle.id" BUILD_NUMBER=30 WALLET_DISTRIBUTION_PROVISIONING_PROFILE_APP="wallet provisioning profile name" CODESIGNING_SOURCE_DATA_PATH="$HOME/wallet_codesigning" sh Wallet/example_wallet_env.sh make -f Wallet.makefile wallet_app
 ```
 
 6. If needed, generate Xcode project
