@@ -375,7 +375,7 @@ public final class TonInstance {
                         subscriber.putNext(state.lastTransactionId.flatMap(WalletTransactionId.init(tonTransactionId:)))
                     }, error: { error in
                         if let error = error as? TONError {
-                            if error.text.hasPrefix("ДITE_SERVER_") {
+                            if error.text.hasPrefix("LITE_SERVER_") {
                                 subscriber.putError(.network)
                             } else {
                                 subscriber.putError(.generic)
