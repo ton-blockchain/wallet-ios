@@ -391,7 +391,15 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
     
     func shareUrl(_ url: String) {
         if let parsedUrl = URL(string: url) {
-            self.presentNativeController(UIActivityViewController(activityItems: [parsedUrl], applicationActivities: nil))
+            let shareController = UIActivityViewController(activityItems: [parsedUrl], applicationActivities: nil)
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                if let popoverController = shareController.popoverPresentationController {
+                    popoverController.sourceRect = CGRect(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height, width: 0, height: 0)
+                    popoverController.sourceView = self.window.viewController?.view
+                    popoverController.permittedArrowDirections = UIPopoverArrowDirection(rawValue: 0)
+                }
+            }
+            self.presentNativeController(shareController)
         }
     }
     
