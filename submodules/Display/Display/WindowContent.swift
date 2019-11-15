@@ -310,13 +310,26 @@ public class Window1 {
         
         let isLandscape =  boundsSize.width > boundsSize.height
         let safeInsets = self.deviceMetrics.safeInsets(inLandscape: isLandscape)
-        let onScreenNavigationHeight = self.deviceMetrics.onScreenNavigationHeight(inLandscape: isLandscape)
+        let onScreenNavigationHeight = self.deviceMetrics.onScreenNavigationHeight(inLandscape: isLandscape, systemOnScreenNavigationHeight: self.hostView.onScreenNavigationHeight)
         
         self.windowLayout = WindowLayout(size: boundsSize, metrics: layoutMetricsForScreenSize(boundsSize), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, safeInsets: safeInsets, onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: nil, inVoiceOver: UIAccessibility.isVoiceOverRunning)
         self.updatingLayout = UpdatingLayout(layout: self.windowLayout, transition: .immediate)
         self.presentationContext = PresentationContext()
         self.overlayPresentationContext = GlobalOverlayPresentationContext(statusBarHost: statusBarHost, parentView: self.hostView.containerView)
         self.topPresentationContext = PresentationContext()
+        
+        self.presentationContext.topLevelSubview = { [weak self] in
+            guard let strongSelf = self else {
+                return nil
+            }
+            if let first = strongSelf.topPresentationContext.controllers.first {
+                return first.0.displayNode.view
+            }
+            if let first = strongSelf._topLevelOverlayControllers.first {
+                return first.view
+            }
+            return nil
+        }
         
         self.presentationContext.updateIsInteractionBlocked = { [weak self] value in
             self?.isInteractionBlocked = value
@@ -762,8 +775,6 @@ public class Window1 {
                     }
                 }
             }
-            
-            self.presentationContext.topLevelSubview = self._topLevelOverlayControllers.first?.view
         }
     }
     
@@ -899,6 +910,8 @@ public class Window1 {
         self.presentationContext.updateToInterfaceOrientation(orientation)
         self.overlayPresentationContext.updateToInterfaceOrientation(orientation)
         
+         self.topPresentationContext.updateToInterfaceOrientation(orientation)
+        
         for controller in self.topLevelOverlayControllers {
             controller.updateToInterfaceOrientation(orientation)
         }
@@ -937,7 +950,7 @@ public class Window1 {
                     statusBarHeight = max(statusBarHeightValue, statusBarHost.statusBarFrame.size.height)
                 }
                 
-                if self.deviceMetrics.type == .tablet, let onScreenNavigationHeight = self.hostView.onScreenNavigationHeight, onScreenNavigationHeight != self.deviceMetrics.onScreenNavigationHeight(inLandscape: false) {
+                if self.deviceMetrics.type == .tablet, let onScreenNavigationHeight = self.hostView.onScreenNavigationHeight, onScreenNavigationHeight != self.deviceMetrics.onScreenNavigationHeight(inLandscape: false, systemOnScreenNavigationHeight: self.hostView.onScreenNavigationHeight) {
                     self.deviceMetrics = DeviceMetrics(screenSize: UIScreen.main.bounds.size, statusBarHeight: statusBarHeight ?? defaultStatusBarHeight, onScreenNavigationHeight: onScreenNavigationHeight)
                 }
                 
@@ -954,7 +967,7 @@ public class Window1 {
                 }
                 let previousInputOffset = inputHeightOffsetForLayout(self.windowLayout)
                 
-                self.windowLayout = WindowLayout(size: updatingLayout.layout.size, metrics: layoutMetricsForScreenSize(updatingLayout.layout.size), statusBarHeight: statusBarHeight, forceInCallStatusBarText: updatingLayout.layout.forceInCallStatusBarText, inputHeight: updatingLayout.layout.inputHeight, safeInsets: updatingLayout.layout.safeInsets, onScreenNavigationHeight: self.deviceMetrics.onScreenNavigationHeight(inLandscape: isLandscape), upperKeyboardInputPositionBound: updatingLayout.layout.upperKeyboardInputPositionBound, inVoiceOver: updatingLayout.layout.inVoiceOver)
+                self.windowLayout = WindowLayout(size: updatingLayout.layout.size, metrics: layoutMetricsForScreenSize(updatingLayout.layout.size), statusBarHeight: statusBarHeight, forceInCallStatusBarText: updatingLayout.layout.forceInCallStatusBarText, inputHeight: updatingLayout.layout.inputHeight, safeInsets: updatingLayout.layout.safeInsets, onScreenNavigationHeight: self.deviceMetrics.onScreenNavigationHeight(inLandscape: isLandscape, systemOnScreenNavigationHeight: self.hostView.onScreenNavigationHeight), upperKeyboardInputPositionBound: updatingLayout.layout.upperKeyboardInputPositionBound, inVoiceOver: updatingLayout.layout.inVoiceOver)
                 
                 let childLayout = containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics)
                 let childLayoutUpdated = self.updatedContainerLayout != childLayout
@@ -972,6 +985,8 @@ public class Window1 {
                     }
                     self.presentationContext.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
                     self.overlayPresentationContext.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
+                    
+                    self.topPresentationContext.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
                 
                     for controller in self.topLevelOverlayControllers {
                         updatingLayout.transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(), size: self.windowLayout.size))
@@ -1168,11 +1183,15 @@ public class Window1 {
     }
     
     public func forEachViewController(_ f: (ContainableController) -> Bool) {
+        if let navigationController = self._rootController as? NavigationController, let controller = navigationController.topOverlayController {
+            !f(controller)
+        }
         for (controller, _) in self.presentationContext.controllers {
             if !f(controller) {
                 break
             }
         }
+        
         for controller in self.topLevelOverlayControllers {
             if !f(controller) {
                 break

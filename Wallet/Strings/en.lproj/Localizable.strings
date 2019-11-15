@@ -39,7 +39,7 @@
 "Wallet.Receive.CopyInvoiceUrl" = "Copy Invoice URL";
 "Wallet.Receive.ShareAddress" = "Share Wallet Address";
 "Wallet.Receive.ShareInvoiceUrl" = "Share Invoice URL";
-"Wallet.Receive.ShareUrlInfo" = "Share this link with other Gram wallet owners to receive Grams from them.";
+"Wallet.Receive.ShareUrlInfo" = "Share this link with other Gram wallet owners to receive Grams from them. Note: this link won't work for real Grams.";
 "Wallet.Receive.AmountHeader" = "AMOUNT";
 "Wallet.Receive.AmountText" = "Grams to receive";
 "Wallet.Receive.AmountInfo" = "You can specify the amount and purpose of the payment to save the sender some time.";
@@ -218,3 +218,6 @@
 "Wallet.Time.PreciseDate_m12" = "Dec %1$@, %2$@ at %3$@";
 "Wallet.VoiceOver.Editing.ClearText" = "Clear text";
 "Wallet.Receive.ShareInvoiceUrlInfo" = "Share this link with other Gram wallet owners to receive %@ Grams from them.";
+"Wallet.AccessDenied.Title" = "Please Allow Access";
+"Wallet.AccessDenied.Camera" = "TON Wallet needs access to your camera to take photos and videos.\n\nPlease go to Settings > Privacy > Camera and set TON Wallet to ON.";
+"Wallet.AccessDenied.Settings" = "Settings";

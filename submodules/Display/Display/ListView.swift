@@ -249,6 +249,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public final var generalScrollDirectionUpdated: (GeneralScrollDirection) -> Void = { _ in }
     
     public final var reorderItem: (Int, Int, Any?) -> Signal<Bool, NoError> = { _, _, _ in return .single(false) }
+    public final var reorderCompleted: (Any?) -> Void = { _ in }
     
     private final var animations: [ListViewAnimation] = []
     private final var actionsForVSync: [() -> ()] = []
@@ -424,6 +425,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             self.addSubnode(reorderNode)
         }
         itemNode.isHidden = true
+        
+        if self.reorderFeedback == nil {
+            self.reorderFeedback = HapticFeedback()
+        }
+        self.reorderFeedback?.impact()
     }
     
     private func endReordering() {
@@ -439,6 +445,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 reorderNode.removeFromSupernode()
             }
         }
+        self.reorderCompleted(self.opaqueTransactionState)
     }
     
     private func updateReordering(offset: CGFloat) {
@@ -1764,7 +1771,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         }, node: {
                             assert(Queue.mainQueue().isCurrent())
                             return referenceNode.syncWith({ $0 })!
-                        }, params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right), previousItem: index == 0 ? nil : self.items[index - 1], nextItem: index == self.items.count - 1 ? nil : self.items[index + 1], animation: updateAnimation, completion: { layout, apply in
+                        }, params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), previousItem: index == 0 ? nil : self.items[index - 1], nextItem: index == self.items.count - 1 ? nil : self.items[index + 1], animation: updateAnimation, completion: { layout, apply in
                             var updatedState = state
                             var updatedOperations = operations
                             
@@ -1839,7 +1846,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     let index = insertionItemIndexAndDirection.0
                     let threadId = pthread_self()
                     var tailRecurse = false
-                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: self.items[index], previousNode: previousNodes[index], index: index, previousItem: index == 0 ? nil : self.items[index - 1], nextItem: self.items.count == index + 1 ? nil : self.items[index + 1], params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right), updateAnimation: updateAnimation, completion: { (node, layout, apply) in
+                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: self.items[index], previousNode: previousNodes[index], index: index, previousItem: index == 0 ? nil : self.items[index - 1], nextItem: self.items.count == index + 1 ? nil : self.items[index + 1], params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), updateAnimation: updateAnimation, completion: { (node, layout, apply) in
                         
                         if pthread_equal(pthread_self(), threadId) != 0 && !tailRecurse {
                             tailRecurse = true
@@ -1875,7 +1882,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             } else {
                 let updateItem = updateIndicesAndItems[0]
                 if let previousNode = previousNodes[updateItem.index] {
-                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: updateItem.item, previousNode: previousNode, index: updateItem.index, previousItem: updateItem.index == 0 ? nil : self.items[updateItem.index - 1], nextItem: updateItem.index == (self.items.count - 1) ? nil : self.items[updateItem.index + 1], params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right), updateAnimation: animated ? .System(duration: insertionAnimationDuration) : .None, completion: { _, layout, apply in
+                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: updateItem.item, previousNode: previousNode, index: updateItem.index, previousItem: updateItem.index == 0 ? nil : self.items[updateItem.index - 1], nextItem: updateItem.index == (self.items.count - 1) ? nil : self.items[updateItem.index + 1], params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), updateAnimation: animated ? .System(duration: insertionAnimationDuration) : .None, completion: { _, layout, apply in
                         state.updateNodeAtItemIndex(updateItem.index, layout: layout, direction: updateItem.directionHint, animation: animated ? .System(duration: insertionAnimationDuration) : .None, apply: apply, operations: &operations)
                         
                         updateIndicesAndItems.remove(at: 0)
@@ -2680,6 +2687,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             if highlightedItemNode.index != self.highlightedItemIndex {
                 highlightedItemNode.setHighlighted(false, at: CGPoint(), animated: false)
                 self.highlightedItemIndex = nil
+                self.selectionTouchLocation = nil
             }
         } else if self.highlightedItemIndex != nil {
             self.highlightedItemIndex = nil
