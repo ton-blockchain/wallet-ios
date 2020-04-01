@@ -98,6 +98,7 @@ class WalletInfoTransactionItem: ListViewItem {
 private let titleFont = Font.medium(17.0)
 private let textFont = Font.monospace(15.0)
 private let descriptionFont = Font.regular(15.0)
+private let descriptionMonospaceFont = Font.monospace(15.0)
 private let dateFont = Font.regular(14.0)
 private let directionFont = Font.regular(15.0)
 
@@ -222,6 +223,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             }
             var text: String = ""
             var description: String = ""
+            var descriptionIsMonospace = false
             if transferredValue <= 0 {
                 sign = ""
                 title = "\(formatBalanceText(-transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
@@ -242,7 +244,15 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                             if !description.isEmpty {
                                 description.append("\n")
                             }
-                            description.append(message.textMessage)
+                            switch message.contents {
+                            case .raw:
+                                break
+                            case .encryptedText:
+                                description.append("Encrypted Comment")
+                                descriptionIsMonospace = true
+                            case let .plainText(text):
+                                description.append(text)
+                            }
                         }
                     }
                 case let .pending(transaction):
@@ -268,7 +278,15 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                 case let .completed(transaction):
                     if let inMessage = transaction.inMessage {
                         text = formatAddress(inMessage.source)
-                        description = inMessage.textMessage
+                        switch inMessage.contents {
+                        case .raw:
+                            description = ""
+                        case .encryptedText:
+                            description = "Encrypted Comment"
+                            descriptionIsMonospace = true
+                        case let .plainText(text):
+                            description = text
+                        }
                     } else {
                         text = "<unknown>"
                     }
@@ -312,7 +330,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: description, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: description, font: descriptionIsMonospace ? descriptionMonospaceFont : descriptionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (feesLayout, feesApply) = makeFeesLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: feeText, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -520,6 +538,10 @@ private final class WalletInfoTransactionDateHeader: ListViewItemHeader {
     func node() -> ListViewItemHeaderNode {
         return WalletInfoTransactionDateHeaderNode(theme: self.theme, strings: self.strings, roundedTimestamp: self.localTimestamp)
     }
+    
+    func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
+        
+    }
 }
 
 private let sectionTitleFont = Font.semibold(17.0)
@@ -558,7 +580,7 @@ private func monthAtIndex(_ index: Int, strings: WalletStrings) -> String {
 final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
     var theme: WalletTheme
     var strings: WalletStrings
-    let titleNode: ASTextNode
+    let titleNode: ImmediateTextNode
     let backgroundNode: ASDisplayNode
     let separatorNode: ASDisplayNode
     
@@ -574,7 +596,7 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
         self.separatorNode.isLayerBacked = true
         self.separatorNode.backgroundColor = theme.list.itemBlocksSeparatorColor
         
-        self.titleNode = ASTextNode()
+        self.titleNode = ImmediateTextNode()
         self.titleNode.isUserInteractionEnabled = false
         
         super.init()
@@ -609,7 +631,7 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
         self.addSubnode(self.titleNode)
         self.titleNode.attributedText = NSAttributedString(string: text, font: sectionTitleFont, textColor: theme.list.itemPrimaryTextColor)
         self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.truncationMode = .byTruncatingTail
+        self.titleNode.truncationType = .end
     }
     
     func updateThemeAndStrings(theme: WalletTheme, strings: WalletStrings) {
@@ -626,7 +648,7 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
-        let titleSize = self.titleNode.measure(CGSize(width: size.width - leftInset - rightInset - 24.0, height: CGFloat.greatestFiniteMagnitude))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - leftInset - rightInset - 24.0, height: CGFloat.greatestFiniteMagnitude))
         self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel))

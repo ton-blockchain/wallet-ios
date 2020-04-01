@@ -1,0 +1,66 @@
+/*
+  Strings for user-modifiable options in the Tulsi Xcode project generator.
+  Each string key is a user-editable option for the project generator.
+  Each key may have an optional _DESC pairing that provides a detailed description of the option
+    (e.g., to be used in a tooltip or help string)
+*/
+
+"ALWAYS_SEARCH_USER_PATHS" = "Always search user paths";
+"ALWAYS_SEARCH_USER_PATHS_DESC" ="Whether to search for all headers (not just \"\" included ones) in the user header search paths before system paths.";
+
+"BazelBuildOptions" = "'build' options";
+"BazelBuildOptions_DESC" = "Options for bazel 'build' invocations.";
+"BazelBuildOptionsDebug" = "Debug";
+"BazelBuildOptionsRelease" = "Release";
+
+"ProjectGenerationCompilationMode" = "Bazel --compilation_mode for project generation";
+"ProjectGenerationCompilationMode_DESC" = "Modify this to opt if you frequently build Release builds in your generated project instead of Debug builds.";
+
+"ProjectGenerationPlatformConfiguration" = "Bazel Apple platform and cpu for project generation";
+"ProjectGenerationPlatformConfiguration_DESC" = "Modify this to the expected configuration for your project. Setting this incorrectly won't break your builds but it will potentially make them slower and may potentially alter the generated project if your project depends on Bazel `select`s.";
+
+"ProjectGenerationBazelStartupOptions" = "'build' startup options used for project generation.";
+"ProjectGenerationBazelStartupOptions_DESC" = "Modify this to add startup options for bazel invocations during project generation. Note: Modifying this will trigger a server restart between project generation and building, so the first build after generating the project will be slower than usual.";
+
+"BazelBuildStartupOptions" = "'build' startup options";
+"BazelBuildStartupOptions_DESC" = "Startup options for bazel 'build' invocations.";
+"BazelBuildStartupOptionsDebug" = "Debug";
+"BazelBuildStartupOptionsRelease" = "Release";
+
+"BazelContinueBuildingAfterError" = "Continue building after error";
+
+"ImprovedImportAutocompletionFix" = "Improve #include/#import auto-completion through the use of USER_HEADER_SEARCH_PATHS";
+
+"GenerateRunfiles" = "Generate the runfiles directory used as TEST_SRCDIR";
+
+"ProjectPrioritizesSwift" = "Prioritize for Swift development instead of (Obj-)C(++)";
+"ProjectPrioritizesSwift_DESC" = "Tulsi uses this to try to improve Bazel caching; set this if you anticipate that most of your builds inside of the generated xcodeproj depend on Swift in some way. Setting this incorrectly won't break your builds but it will potentially make them slower.";
+"CLANG_CXX_LANGUAGE_STANDARD" = "C++ language standard";
+"CLANG_CXX_LANGUAGE_STANDARD_DESC" = "Sets the C++ language standard project wide to prevent any false live issue errors involving certain C++ features.";
+
+"CommandlineArguments" = "Commandline arguments";
+"EnvironmentVariables" = "Environment variables";
+
+"PreActionScriptOptions" = "PreActionScripts";
+"PostActionScriptOptions" = "PostActionScripts";
+"BuildActionPreActionScript" = "Build";
+"BuildActionPostActionScript" = "Build";
+"LaunchActionPreActionScript" = "Run";
+"LaunchActionPostActionScript" = "Run";
+"TestActionPreActionScript" = "Test";
+"TestActionPostActionScript" = "Test";
+
+"PreBuildPhaseRunScript" = "Build phase run script (pre bazel build)";
+"PreBuildPhaseRunScript_DESC" = "Build phase run script that runs before the bazel_build.py script (i.e. `exec ${PATH_TO_SCRIPT}')";
+"PostBuildPhaseRunScript" = "Build phase run script (post bazel build)";
+"PostBuildPhaseRunScript_DESC" = "Build phase run script that runs after the bazel_build.py script (i.e. `exec ${PATH_TO_SCRIPT}')";
+
+"SwiftForcesdSYMs" = "Swift code dependency enables dSYMs (optional for debugging after 10.2.1)";
+"TreeArtifactOutputs" = "Enable tree artifact outputs (--define=apple.experimental.tree_artifact_outputs=1). Disable if you're having issues.";
+
+"SuppressSwiftUpdateCheck" = "Suppress Xcode Swift update check";
+"SuppressSwiftUpdateCheck_DESC" = "Suppresses Xcode's update notification for projects containing Swift code. This asserts that the Swift code is at least version 2.1.";
+
+"IncludeBuildSources" = "Include Bazel sources in the generated project.";
+"IncludeBuildSources_DESC" = "Add .bzl and BUILD files related to selected targets in the generated Xcode project. This may slow down project generation significantly.";
+

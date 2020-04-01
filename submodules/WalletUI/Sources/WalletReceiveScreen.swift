@@ -170,7 +170,7 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
         
         self.textNode = ImmediateTextNode()
         self.textNode.textAlignment = .center
-        self.textNode.maximumNumberOfLines = 3
+        self.textNode.maximumNumberOfLines = 5
         
         self.qrImageNode = TransformImageNode()
         self.qrImageNode.clipsToBounds = true
@@ -232,15 +232,14 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
         }
         
         let textFont = Font.regular(16.0)
-        let textColor = self.presentationData.theme.list.itemPrimaryTextColor
         let secondaryTextColor = self.presentationData.theme.list.itemSecondaryTextColor
         let url = urlForMode(self.mode)
         switch self.mode {
-            case let .receive(address):
+            case .receive:
                 self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Wallet_Receive_ShareUrlInfo, font: textFont, textColor: secondaryTextColor)
                 self.buttonNode.title = self.presentationData.strings.Wallet_Receive_ShareAddress
                 self.secondaryButtonNode.setTitle(self.presentationData.strings.Wallet_Receive_CreateInvoice, with: Font.regular(17.0), with: self.presentationData.theme.list.itemAccentColor, for: .normal)
-            case let .invoice(address, amount, comment):
+            case .invoice:
                 self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Wallet_Receive_ShareUrlInfo, font: textFont, textColor: secondaryTextColor, paragraphAlignment: .center)
                 self.buttonNode.title = self.presentationData.strings.Wallet_Receive_ShareInvoiceUrl
         }
@@ -255,7 +254,7 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
         super.didLoad()
         
         let addressGestureRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapAddressGesture(_:)))
-        addressGestureRecognizer.tapActionAtPoint = { [weak self] point in
+        addressGestureRecognizer.tapActionAtPoint = { point in
             return .waitForSingleTap
         }
         self.urlTextNode.view.addGestureRecognizer(addressGestureRecognizer)
@@ -264,7 +263,7 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
     @objc func tapLongTapOrDoubleTapAddressGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
-            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+            if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 switch gesture {
                 case .longTap:
                     self.displayCopyContextMenu?(self, self.urlTextNode.frame, urlForMode(self.mode))
@@ -288,33 +287,6 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationHeight)
         
-        var insets = layout.insets(options: [])
-        insets.top += navigationHeight
-        let inset: CGFloat = 22.0
-        
-        let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: insets.top + 24.0), size: textSize)
-        transition.updateFrame(node: self.textNode, frame: textFrame)
-        
-        let makeImageLayout = self.qrImageNode.asyncLayout()
-        
-        let imageSide: CGFloat = 215.0
-        var imageSize = CGSize(width: imageSide, height: imageSide)
-        let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil))
-        
-        let _ = imageApply()
-        
-        let imageFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: textFrame.maxY + 20.0), size: imageSize)
-        transition.updateFrame(node: self.qrImageNode, frame: imageFrame)
-        transition.updateFrame(node: self.qrButtonNode, frame: imageFrame)
-        
-        if let qrCodeSize = self.qrCodeSize {
-            let (_, cutoutFrame, _) = qrCodeCutout(size: qrCodeSize, dimensions: imageSize, scale: nil)
-            self.qrIconNode.updateLayout(size: cutoutFrame.size)
-            transition.updateBounds(node: self.qrIconNode, bounds: CGRect(origin: CGPoint(), size: cutoutFrame.size))
-            transition.updatePosition(node: self.qrIconNode, position: imageFrame.center.offsetBy(dx: 0.0, dy: -1.0))
-        }
-        
         if self.urlTextNode.attributedText?.string.isEmpty ?? true {
             var url = urlForMode(self.mode)
             if case .receive = self.mode {
@@ -336,23 +308,74 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
             self.urlTextNode.attributedText = NSAttributedString(string: sliced, font: addressFont, textColor: self.presentationData.theme.list.itemPrimaryTextColor, paragraphAlignment: .justified)
         }
         
-        let addressInset: CGFloat = 12.0
-        let urlTextSize = self.urlTextNode.updateLayout(CGSize(width: layout.size.width - addressInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        transition.updateFrame(node: self.urlTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - urlTextSize.width) / 2.0), y: imageFrame.maxY + 23.0), size: urlTextSize))
+        var insets = layout.insets(options: [])
+        insets.top += navigationHeight
+        let inset: CGFloat = 22.0
         
         let buttonSideInset: CGFloat = 16.0
         let bottomInset = insets.bottom + 10.0
         let buttonWidth = layout.size.width - buttonSideInset * 2.0
         let buttonHeight: CGFloat = 50.0
         
+        let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        
+        let addressInset: CGFloat = 12.0
+        let urlTextSize = self.urlTextNode.updateLayout(CGSize(width: layout.size.width - addressInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        
         var buttonOffset: CGFloat = 0.0
         if let _ = self.secondaryButtonNode.attributedTitle(for: .normal) {
             buttonOffset = -60.0
+        }
+        
+        let imageSide: CGFloat = 215.0
+        let imageSize = CGSize(width: imageSide, height: imageSide)
+        
+        let buttonTopEdge = layout.size.height - bottomInset - buttonHeight + buttonOffset
+        
+        var topTextSpacing: CGFloat = 24.0
+        var imageSpacing: CGFloat = 20.0
+        var urlSpacing: CGFloat = 23.0
+        
+        var contentHeight: CGFloat = insets.top
+        contentHeight += topTextSpacing + textSize.height
+        contentHeight += imageSpacing + imageSide
+        contentHeight += urlSpacing + urlTextSize.height
+        
+        if contentHeight >= buttonTopEdge - 10.0 {
+            let factor: CGFloat = 0.5
+            topTextSpacing = floor(topTextSpacing * factor * 0.3)
+            imageSpacing = floor(imageSpacing * factor)
+            urlSpacing = floor(urlSpacing * factor)
+        }
+        
+        let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: insets.top + topTextSpacing), size: textSize)
+        transition.updateFrame(node: self.textNode, frame: textFrame)
+        
+        let makeImageLayout = self.qrImageNode.asyncLayout()
+        
+        let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil))
+        
+        let _ = imageApply()
+        
+        let imageFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: textFrame.maxY + imageSpacing), size: imageSize)
+        transition.updateFrame(node: self.qrImageNode, frame: imageFrame)
+        transition.updateFrame(node: self.qrButtonNode, frame: imageFrame)
+        
+        if let qrCodeSize = self.qrCodeSize {
+            let (_, cutoutFrame, _) = qrCodeCutout(size: qrCodeSize, dimensions: imageSize, scale: nil)
+            self.qrIconNode.updateLayout(size: cutoutFrame.size)
+            transition.updateBounds(node: self.qrIconNode, bounds: CGRect(origin: CGPoint(), size: cutoutFrame.size))
+            transition.updatePosition(node: self.qrIconNode, position: imageFrame.center.offsetBy(dx: 0.0, dy: -1.0))
+        }
+        
+        transition.updateFrame(node: self.urlTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - urlTextSize.width) / 2.0), y: imageFrame.maxY + urlSpacing), size: urlTextSize))
+        
+        if let _ = self.secondaryButtonNode.attributedTitle(for: .normal) {
             self.secondaryButtonNode.frame = CGRect(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight, width: buttonWidth, height: buttonHeight)
         }
         
         let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight + buttonOffset), size: CGSize(width: buttonWidth, height: buttonHeight))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-        self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
     }
 }

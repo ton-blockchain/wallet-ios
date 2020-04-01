@@ -1,0 +1,70 @@
+# Tulsi - an Xcode Project Generator For Bazel
+
+[![Build Status](https://travis-ci.org/bazelbuild/tulsi.svg?branch=master)](https://travis-ci.org/bazelbuild/tulsi)
+
+<span style="background-color:OldLace; padding:10px">
+tulsi - /ˈto͝olsē/  A kind of basil that is venerated by Hindus as a sacred
+plant.
+</span>
+
+## Building and installing
+
+1.  Check `.bazelrc` to see if the Xcode version used by Tulsi is installed
+    locally. If it isn't, feel free to remove the `--xcode_version` flag or
+    modify it as you wish, but note that Tulsi may not build correctly with
+    different versions of Xcode.
+1.  Run `build_and_run.sh`. This will install Tulsi.app inside ~/Applications.
+
+
+## Notes
+
+Tulsi-generated Xcode projects use Bazel to build, **not** Xcode via xcbuild. This means
+that many common components of an Xcode project are handled differently than you
+may be used to. Notable differences:
+
+*   **BUILD files are the source of truth**; most changes made to your Xcode project
+    won't affect the build.
+    *   Adding new sources to the Xcode project won't include them in your app;
+        they must be added to BUILD files.
+    *   Changes made to your BUILD files, such as adding new library
+        dependencies, are incorporated automatically when building your
+        generated project. The only time you need to re-run Tulsi is if you want
+        to add additional build targets or have new source files show up in
+        Xcode for editing.
+    *   The Info.plist file is governed entirely by BUILD rules in Bazel and is
+        not displayed in the Xcode UI.
+    *   Changes to compilation flags (i.e. -DHELLO) should be made in the BUILD
+        files in order to affect the build; changes made to compilation settings
+        in the Xcode UI will only affect indexing. You may want to regenerate
+        your project using Tulsi after modifying compilation flags.
+*   Tulsi will set some Tulsi-specific flags for `bazel` invocations, some of
+    which may affect Bazel caching. In order to maximize cache re-use when
+    building from the command line, try using the `user_build.py` script which
+    is located in the generated xcodeproj at
+    `<xcodeproj>/.tulsi/Scripts/user_build.py`.
+
+## Tulsi project and config settings
+
+Tulsi projects contain a few settings which control various behaviors during
+project generation and builds.
+
+*   Bazel `build` flags, customizable per compilation mode (`dbg` and `opt`)
+*   Bazel `build` startup flags, also customizable per compilation mode
+*   Generation platform configuration: Target platform and arch used during project
+    generation.
+    *   Can change from targeting iOS sim to iOS device or from iOS to macOS.
+        Setting this improperly shouldn't break your project although it may
+        potentially worsen generation and build performance.
+*   Generation compilation mode: Bazel compilation mode (`dbg` or `opt`, no
+    `fastbuild`) used during project generation.
+    *   Defaults to `dbg`, swap to `opt` if you normally build Release builds in
+        Xcode (i.e. profiling your app). Setting this improperly shouldn't break
+        your project although it may potentially worsen generation and build
+        performance.
+*   Prioritize Swift: set this to inform Tulsi that it should use Swift-specific
+    flags during project generation.
+    *   Defaults to `No`, swap to `Yes` if your project contains Swift (even
+        in its dependencies). Setting this improperly shouldn't break your
+        project although it may potentially worsen generation and build
+        performance.
+

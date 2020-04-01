@@ -1,0 +1,22 @@
+{
+  "configDefaults" : {
+    "optionSet" : {
+      "BazelBuildOptionsDebug" : {
+        "p" : "--nocheck_visibility"
+      },
+      "GenerateRunfiles" : {
+        "p" : "YES"
+      },
+      "TreeArtifactOutputs" : {
+        "p" : "NO"
+      }
+    }
+  },
+  "packages" : [
+    "",
+    "src/TulsiGeneratorIntegrationTests",
+    "src/TulsiGeneratorTests"
+  ],
+  "projectName" : "Tulsi",
+  "workspaceRoot" : ".."
+}

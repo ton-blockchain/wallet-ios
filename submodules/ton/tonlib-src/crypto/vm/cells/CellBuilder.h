@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include "vm/cells/DataCell.h"
@@ -78,6 +78,7 @@ class CellBuilder : public td::CntObject {
   const unsigned char* get_data() const {
     return data;
   }
+  td::uint16 get_depth() const;
   td::ConstBitPtr data_bits() const {
     return data;
   }
@@ -85,6 +86,10 @@ class CellBuilder : public td::CntObject {
     return idx < refs_cnt ? refs[idx] : Ref<Cell>{};
   }
   void reset();
+  bool reset_bool() {
+    reset();
+    return true;
+  }
   CellBuilder& operator=(const CellBuilder&);
   CellBuilder& operator=(CellBuilder&&);
   CellBuilder& store_bytes(const char* str, std::size_t len);
@@ -172,12 +177,13 @@ class CellBuilder : public td::CntObject {
   Ref<DataCell> finalize_copy(bool special = false) const;
   Ref<DataCell> finalize(bool special = false);
   Ref<DataCell> finalize_novm(bool special = false);
+  td::Result<Ref<DataCell>> finalize_novm_nothrow(bool special = false);
   bool finalize_to(Ref<Cell>& res, bool special = false) {
     return (res = finalize(special)).not_null();
   }
-  CellSlice as_cellslice() const &;
+  CellSlice as_cellslice() const&;
   CellSlice as_cellslice() &&;
-  Ref<CellSlice> as_cellslice_ref() const &;
+  Ref<CellSlice> as_cellslice_ref() const&;
   Ref<CellSlice> as_cellslice_ref() &&;
   static td::int64 get_total_cell_builders() {
     return get_thread_safe_counter().sum();

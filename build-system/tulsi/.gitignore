@@ -1,0 +1,6 @@
+# AppCode files.
+*/.idea/
+
+# Build artifacts
+src/build/
+/bazel-*

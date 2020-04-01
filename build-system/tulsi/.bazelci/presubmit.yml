@@ -1,0 +1,11 @@
+---
+platforms:
+  macos:
+    xcode_version: "11.1"
+    bazel: last_downstream_green
+    build_targets:
+    - "//:tulsi"
+    test_flags:
+    - "--nocheck_visibility"
+    test_targets:
+    - "//:tests"

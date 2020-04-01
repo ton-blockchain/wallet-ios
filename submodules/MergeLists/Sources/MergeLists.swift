@@ -181,7 +181,7 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], allUpd
     return (removeIndices, insertItems, updatedIndices)
 }
 
-@inlinable
+//@inlinable
 public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], isLess: (T, T) -> Bool, isEqual: (T, T) -> Bool, getId: (T) -> AnyHashable, allUpdated: Bool = false) -> ([Int], [(Int, T, Int?)], [(Int, T, Int)]) {
     var removeIndices: [Int] = []
     var insertItems: [(Int, T, Int?)] = []
@@ -206,6 +206,46 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], isLess
         }
     }
     #endif
+    
+    var leftStableIds: [AnyHashable] = []
+    var rightStableIds: [AnyHashable] = []
+    for item in leftList {
+        leftStableIds.append(getId(item))
+    }
+    for item in rightList {
+        rightStableIds.append(getId(item))
+    }
+    if Set(leftStableIds) == Set(rightStableIds) && leftStableIds != rightStableIds && !allUpdated {
+        var updatedItems: [(T, AnyHashable)] = []
+        for i in 0 ..< leftList.count {
+            if getId(leftList[i]) != getId(rightList[i]) {
+                removeIndices.append(i)
+            } else {
+                updatedItems.append((leftList[i], getId(leftList[i])))
+            }
+        }
+        var i = 0
+        while i < rightList.count {
+            if updatedItems[i].1 != getId(rightList[i]) {
+                updatedItems.insert((rightList[i], getId(rightList[i])), at: i)
+                var previousIndex: Int?
+                for k in 0 ..< leftList.count {
+                    if getId(leftList[k]) == getId(rightList[i]) {
+                        previousIndex = k
+                        break
+                    }
+                }
+                assert(previousIndex != nil)
+                insertItems.append((i, rightList[i], previousIndex))
+            } else {
+                if !isEqual(updatedItems[i].0, rightList[i]) {
+                    updatedIndices.append((i, rightList[i], i))
+                }
+            }
+            i += 1
+        }
+        return (removeIndices, insertItems, updatedIndices)
+    }
     
     var currentList = leftList
     

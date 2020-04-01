@@ -1,0 +1,35 @@
+{
+  "sourceFilters" : [
+    "src/..."
+  ],
+  "buildTargets" : [
+    "//src/TulsiEndToEndTests:TulsiEndToEndTest",
+    "//src/TulsiGeneratorIntegrationTests:AspectTests",
+    "//src/TulsiGeneratorIntegrationTests:EndToEndGenerationTests",
+    "//src/TulsiGeneratorIntegrationTests:PlatformDependentEndToEndGenerationTests",
+    "//src/TulsiGeneratorIntegrationTests:QueryTests",
+    "//src/TulsiGeneratorTests:TulsiGeneratorTests",
+    "//:tulsi"
+  ],
+  "projectName" : "Tulsi",
+  "optionSet" : {
+    "BazelBuildOptionsDebug" : {
+      "p" : "$(inherited)"
+    },
+    "BazelBuildStartupOptionsRelease" : {
+      "p" : "$(inherited)"
+    },
+    "BazelBuildStartupOptionsDebug" : {
+      "p" : "$(inherited)"
+    },
+    "GenerateRunfiles" : {
+      "p" : "YES"
+    },
+    "BazelBuildOptionsRelease" : {
+      "p" : "$(inherited)"
+    }
+  },
+  "additionalFilePaths" : [
+    "BUILD"
+  ]
+}
