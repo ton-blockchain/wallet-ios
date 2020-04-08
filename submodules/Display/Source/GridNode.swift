@@ -222,8 +222,10 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     public var scrollingInitiated: (() -> Void)?
     public var scrollingCompleted: (() -> Void)?
     public var interactiveScrollingEnded: (() -> Void)?
-    public var interactiveScrollingWillBeEnded: ((CGPoint, CGPoint) -> Void)?
+    public var interactiveScrollingWillBeEnded: ((CGPoint, CGPoint, CGPoint) -> CGPoint)?
     public var visibleContentOffsetChanged: (GridNodeVisibleContentOffset) -> Void = { _ in }
+    
+    private var autoscrollingAnimator: DisplayLinkAnimator?
     
     public final var floatingSections = false
     
@@ -254,6 +256,10 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.autoscrollingAnimator?.invalidate()
     }
     
     public func transaction(_ transaction: GridNodeTransaction, completion: (GridNodeDisplayedItemRange) -> Void) {
@@ -365,14 +371,66 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         self.applyPresentationLayoutTransition(self.generatePresentationLayoutTransition(stationaryItems: transaction.stationaryItems, layoutTransactionOffset: layoutTransactionOffset, scrollToItem: generatedScrollToItem), removedNodes: removedNodes, updateLayoutTransition: updateLayoutTransition, customScrollToItem: transaction.scrollToItem != nil, itemTransition: transaction.itemTransition, synchronousLoads: transaction.synchronousLoads, updatingLayout: transaction.updateLayout != nil, completion: completion)
     }
     
+    public func autoscroll(toOffset: CGPoint, duration: Double) {
+        if let autoscrollingAnimator = self.autoscrollingAnimator {
+            self.autoscrollingAnimator = nil
+            autoscrollingAnimator.invalidate()
+        }
+        
+        let fromOffset: CGPoint = self.scrollView.contentOffset
+        let fromBounds = CGRect(origin: fromOffset, size: self.scrollView.bounds.size)
+        self.applyingContentOffset = true
+        self.scrollView.setContentOffset(toOffset, animated: false)
+        self.applyingContentOffset = false
+        let toBounds = self.scrollView.bounds
+        let animation = self.scrollView.layer.makeAnimation(from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), keyPath: "bounds", timingFunction: kCAMediaTimingFunctionSpring, duration: duration)
+        self.scrollView.layer.add(animation, forKey: "autoscroll")
+        
+        let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: .spring)
+        
+        self.applyPresentationLayoutTransition(self.generatePresentationLayoutTransition(layoutTransactionOffset: 0.0, customTransition: transition), removedNodes: [], updateLayoutTransition: nil, customScrollToItem: false, itemTransition: .immediate, synchronousLoads: false, updatingLayout: false, completion: { _ in })
+        self.updateVisibleContentOffset()
+        
+        /*let fromOffset: CGPoint = self.scrollView.contentOffset
+        
+        self.autoscrollingAnimator = DisplayLinkAnimator(duration: duration, from: 0.0, to: 1.0, update: { [weak self] t in
+            guard let strongSelf = self else {
+                return
+            }
+            let mappedT = bezierPoint(0.23, 1.0, 0.32, 1.0, t)
+            let offset = CGPoint(x: 0.0, y: (1.0 - mappedT) * fromOffset.y + mappedT * toOffset.y)
+            strongSelf.scrollView.setContentOffset(offset, animated: false)
+        }, completion: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.autoscrollingAnimator?.invalidate()
+            strongSelf.autoscrollingAnimator = nil
+        })*/
+    }
+    
     public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        if let autoscrollingAnimator = self.autoscrollingAnimator {
+            self.autoscrollingAnimator = nil
+            autoscrollingAnimator.invalidate()
+        }
+        
+        if let _ = self.scrollView.layer.animation(forKey: "autoscroll") {
+            if let presentationLayer = self.scrollView.layer.presentation() {
+                self.scrollView.bounds = presentationLayer.bounds
+            }
+            self.scrollView.layer.removeAnimation(forKey: "autoscroll")
+        }
+        
         self.updateItemNodeVisibilititesAndScrolling()
         self.updateVisibleContentOffset()
         self.scrollingInitiated?()
     }
     
     public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
-        self.interactiveScrollingWillBeEnded?(velocity, targetContentOffset.pointee)
+        if let interactiveScrollingWillBeEnded = self.interactiveScrollingWillBeEnded {
+            targetContentOffset.pointee = interactiveScrollingWillBeEnded(scrollView.contentOffset, velocity, targetContentOffset.pointee)
+        }
     }
     
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
@@ -590,10 +648,10 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         }
     }
     
-    private func generatePresentationLayoutTransition(stationaryItems: GridNodeStationaryItems = .none, layoutTransactionOffset: CGFloat, scrollToItem: GridNodeScrollToItem? = nil) -> GridNodePresentationLayoutTransition {
+    private func generatePresentationLayoutTransition(stationaryItems: GridNodeStationaryItems = .none, layoutTransactionOffset: CGFloat, scrollToItem: GridNodeScrollToItem? = nil, customTransition: ContainedViewLayoutTransition? = nil) -> GridNodePresentationLayoutTransition {
         if CGFloat(0.0).isLess(than: self.gridLayout.size.width) && CGFloat(0.0).isLess(than: self.gridLayout.size.height) {
             var transitionDirectionHint: GridNodePreviousItemsTransitionDirectionHint = .up
-            var transition: ContainedViewLayoutTransition = .immediate
+            var transition: ContainedViewLayoutTransition = customTransition ?? .immediate
             let contentOffset: CGPoint
             var updatedStationaryItems = stationaryItems
             if let scrollToItem = scrollToItem {
