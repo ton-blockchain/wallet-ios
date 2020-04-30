@@ -296,7 +296,7 @@ private final class WalletSendScreenImpl: ItemListController, WalletSendScreen {
     
 }
 
-public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo: WalletInfo, address: String? = nil, amount: Int64? = nil, comment: String? = nil) -> ViewController {    
+public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo: WalletInfo, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, address: String? = nil, amount: Int64? = nil, comment: String? = nil) -> ViewController {    
     let presentationData = context.presentationData
    
     let initialState = WalletSendScreenState(address: address ?? "", amount: amount.flatMap { formatBalanceText($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) } ?? "", comment: comment ?? "")
@@ -455,7 +455,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
                     |> deliverOnMainQueue).start(next: { serverSalt in
                         if let serverSalt = serverSalt {
                             if let commentData = state.comment.data(using: .utf8) {
-                                pushImpl?(WalletSplashScreen(context: context, mode: .sending(WalletSplashModeSending(walletInfo: walletInfo, address: state.address, amount: amount, comment: commentData, encryptComment: !verificationResult.canNotEncryptComment, randomId: randomId, serverSalt: serverSalt)), walletCreatedPreloadState: nil))
+                                pushImpl?(WalletSplashScreen(context: context, blockchainNetwork: blockchainNetwork, mode: .sending(WalletSplashModeSending(walletInfo: walletInfo, address: state.address, amount: amount, comment: commentData, encryptComment: !verificationResult.canNotEncryptComment, randomId: randomId, serverSalt: serverSalt)), walletCreatedPreloadState: nil))
                             }
                         }
                     })
@@ -501,24 +501,21 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
             })
         }
         
-        let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: context.tonInstance)
-        |> deliverOnMainQueue).start(next: { walletAddress in
-            let presentationData = context.presentationData
-            let state = stateValue.with { $0 }
-            let destinationAddress = state.address
-            
-            if destinationAddress == walletAddress {
-                presentControllerImpl?(standardTextAlertController(theme: presentationData.theme.alert, title: presentationData.strings.Wallet_Send_OwnAddressAlertTitle, text: presentationData.strings.Wallet_Send_OwnAddressAlertText, actions: [
-                    TextAlertAction(type: .genericAction, title: presentationData.strings.Wallet_Alert_Cancel, action: {
-                    }),
-                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Wallet_Send_OwnAddressAlertProceed, action: {
-                        proceed()
-                    })
-                ]), nil)
-            } else {
-                proceed()
-            }
-        })
+        let presentationData = context.presentationData
+        let state = stateValue.with { $0 }
+        let destinationAddress = state.address
+        
+        if destinationAddress == walletInfo.address {
+            presentControllerImpl?(standardTextAlertController(theme: presentationData.theme.alert, title: presentationData.strings.Wallet_Send_OwnAddressAlertTitle, text: presentationData.strings.Wallet_Send_OwnAddressAlertText, actions: [
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Wallet_Alert_Cancel, action: {
+                }),
+                TextAlertAction(type: .defaultAction, title: presentationData.strings.Wallet_Send_OwnAddressAlertProceed, action: {
+                    proceed()
+                })
+            ]), nil)
+        } else {
+            proceed()
+        }
     })
     
     let walletState: Signal<WalletState?, NoError> = getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), tonInstance: context.tonInstance, onlyCached: true)
@@ -572,7 +569,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
         var emptyItem: ItemListControllerEmptyStateItem?
         if let walletState = walletState {
             let textLength: Int = state.comment.data(using: .utf8, allowLossyConversion: true)?.count ?? 0
-            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= walletState.balance && textLength <= walletTextLimit
+            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= walletState.effectiveAvailableBalance && textLength <= walletTextLimit
 
             rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Send_Send), style: .bold, enabled: sendEnabled, action: {
                 arguments.proceed()
@@ -583,7 +580,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
         }
 
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_Send_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Wallet_Navigation_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: walletSendScreenEntries(presentationData: presentationData, balance: walletState?.balance, state: state, sendEnabled: sendEnabled), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: emptyItem, animateChanges: false)
+        let listState = ItemListNodeState(entries: walletSendScreenEntries(presentationData: presentationData, balance: walletState?.effectiveAvailableBalance, state: state, sendEnabled: sendEnabled), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: emptyItem, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

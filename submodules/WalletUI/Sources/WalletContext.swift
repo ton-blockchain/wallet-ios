@@ -27,7 +27,7 @@ public protocol WalletContext {
     func getServerSalt() -> Signal<Data, WalletContextGetServerSaltError>
     func downloadFile(url: URL) -> Signal<Data, WalletDownloadFileError>
     
-    func updateResolvedWalletConfiguration(source: LocalWalletConfigurationSource, blockchainName: String, resolvedValue: String) -> Signal<Never, NoError>
+    func updateResolvedWalletConfiguration(configuration: LocalWalletConfiguration, source: LocalWalletConfigurationSource, resolvedConfig: String) -> Signal<Never, NoError>
     
     func presentNativeController(_ controller: UIViewController)
     

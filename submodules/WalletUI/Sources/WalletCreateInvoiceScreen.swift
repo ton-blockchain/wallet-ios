@@ -228,7 +228,11 @@ func walletCreateInvoiceScreen(context: WalletContext, address: String) -> ViewC
         }
         
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Navigation_Done), style: .bold, enabled: !state.isEmpty, action: {
-            pushImpl?(WalletReceiveScreen(context: context, mode: .invoice(address: address, amount: state.amount, comment: state.comment)))
+            let _ = (context.storage.localWalletConfiguration()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { configuration in
+                pushImpl?(WalletReceiveScreen(context: context, blockchainNetwork: configuration.activeNetwork, mode: .invoice(address: address, amount: state.amount, comment: state.comment)))
+            })
         })
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_CreateInvoice_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Wallet_Navigation_Back), animateChanges: false)

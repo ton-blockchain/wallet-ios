@@ -131,6 +131,21 @@ public enum GeneralScrollDirection {
     case down
 }
 
+public struct ListViewKeepMinimalScrollHeightWithTopInset: Equatable {
+    public enum Value: Equatable {
+        case custom(CGFloat)
+        case headerInsets
+    }
+    
+    public var value: Value
+    public var keepForSingleItem: Bool
+    
+    public init(value: Value, keepForSingleItem: Bool) {
+        self.value = value
+        self.keepForSingleItem = keepForSingleItem
+    }
+}
+
 open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGestureRecognizerDelegate {
     public final let scroller: ListViewScroller
     private final var visibleSize: CGSize = CGSize()
@@ -169,7 +184,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    public final var keepMinimalScrollHeightWithTopInset: CGFloat?
+    public final var keepMinimalScrollHeightWithTopInset: ListViewKeepMinimalScrollHeightWithTopInset?
     
     public final var stackFromBottom: Bool = false
     public final var stackFromBottomInsetItemFactor: CGFloat = 0.0
@@ -361,7 +376,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.view.addGestureRecognizer(trackingRecognizer)
 
         self.view.addGestureRecognizer(ListViewReorderingGestureRecognizer(shouldBegin: { [weak self] point in
-            if let strongSelf = self {
+            if let strongSelf = self, !strongSelf.isTracking {
                 if let index = strongSelf.itemIndexAtPoint(point) {
                     for i in 0 ..< strongSelf.itemNodes.count {
                         if strongSelf.itemNodes[i].index == index {
@@ -984,8 +999,23 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         
         if let keepMinimalScrollHeightWithTopInset = self.keepMinimalScrollHeightWithTopInset, topItemFound {
-            completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset - effectiveInsets.bottom - effectiveInsets.top)
-            bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
+            var valid = true
+            if !keepMinimalScrollHeightWithTopInset.keepForSingleItem {
+                if self.itemNodes.count <= 1 {
+                    valid = false
+                }
+            }
+            if valid {
+                let value: CGFloat
+                switch keepMinimalScrollHeightWithTopInset.value {
+                case let .custom(custom):
+                    value = custom
+                case .headerInsets:
+                    value = self.insets.top - self.headerInsets.top
+                }
+                completeHeight = max(completeHeight, self.visibleSize.height + value - effectiveInsets.bottom - effectiveInsets.top)
+                bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
+            }
         }
         
         var transition: ContainedViewLayoutTransition = .immediate
@@ -1388,8 +1418,23 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
                 
                 if let keepMinimalScrollHeightWithTopInset = self.keepMinimalScrollHeightWithTopInset {
-                    completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset)
-                    bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
+                    var valid = true
+                    if !keepMinimalScrollHeightWithTopInset.keepForSingleItem {
+                        if self.itemNodes.count <= 1 {
+                            valid = false
+                        }
+                    }
+                    if valid {
+                        let value: CGFloat
+                        switch keepMinimalScrollHeightWithTopInset.value {
+                        case let .custom(custom):
+                            value = custom
+                        case .headerInsets:
+                            value = self.insets.top - self.headerInsets.top
+                        }
+                        completeHeight = max(completeHeight, self.visibleSize.height + value)
+                        bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
+                    }
                 }
                 
                 if self.stackFromBottom {

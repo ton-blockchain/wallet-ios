@@ -2068,15 +2068,17 @@ public enum WalletWordCheckMode {
 
 public final class WalletWordCheckScreen: ViewController {
     private let context: WalletContext
+    private let blockchainNetwork: LocalWalletConfiguration.ActiveNetwork
     private var presentationData: WalletPresentationData
     private let mode: WalletWordCheckMode
     
     private let startTime: Double
     
-    private let walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?
+    private let walletCreatedPreloadState: Promise<WalletCreatedPreloadState?>?
     
-    public init(context: WalletContext, mode: WalletWordCheckMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?) {
+    public init(context: WalletContext, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, mode: WalletWordCheckMode, walletCreatedPreloadState: Promise<WalletCreatedPreloadState?>?) {
         self.context = context
+        self.blockchainNetwork = blockchainNetwork
         self.mode = mode
         self.walletCreatedPreloadState = walletCreatedPreloadState
         
@@ -2137,7 +2139,7 @@ public final class WalletWordCheckScreen: ViewController {
                             return true
                         }
                         let _ = confirmWalletExported(storage: strongSelf.context.storage, publicKey: walletInfo.publicKey).start()
-                        controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo: walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                        controllers.append(WalletSplashScreen(context: strongSelf.context, blockchainNetwork: strongSelf.blockchainNetwork, mode: .successfullyCreated(walletInfo: walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                         strongSelf.view.endEditing(true)
                         navigationController.setViewControllers(controllers, animated: true)
                     }
@@ -2205,7 +2207,7 @@ public final class WalletWordCheckScreen: ViewController {
                                 }
                                 return true
                             }
-                            controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo: walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                            controllers.append(WalletSplashScreen(context: strongSelf.context, blockchainNetwork: strongSelf.blockchainNetwork, mode: .successfullyImported(importedInfo: walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                             strongSelf.view.endEditing(true)
                             navigationController.setViewControllers(controllers, animated: true)
                         }
@@ -2232,7 +2234,7 @@ public final class WalletWordCheckScreen: ViewController {
                     }
                     return true
                 }
-                controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .restoreFailed, walletCreatedPreloadState: nil))
+                controllers.append(WalletSplashScreen(context: strongSelf.context, blockchainNetwork: strongSelf.blockchainNetwork, mode: .restoreFailed, walletCreatedPreloadState: nil))
                 navigationController.setViewControllers(controllers, animated: true)
             }
         })

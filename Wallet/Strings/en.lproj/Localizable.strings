@@ -67,7 +67,7 @@
 "Wallet.Settings.Configuration" = "Server Settings";
 "Wallet.Settings.ConfigurationInfo" = "Advanced Settings";
 "Wallet.Settings.BackupWallet" = "Backup Wallet";
-"Wallet.Settings.DeleteWallet" = "Delete Wallet";
+"Wallet.Settings.DeleteWallet" = "Log Out";
 "Wallet.Settings.DeleteWalletInfo" = "This will disconnect the wallet from this app. You will be able to restore your wallet using 24 secret words – or import another wallet.\n\nGram Wallets are located in the decentralized TON Blockchain. If you want a wallet to be deleted, simply transfer all the grams from it and leave it empty.";
 "Wallet.Intro.NotNow" = "Not Now";
 "Wallet.Intro.ImportExisting" = "Import existing wallet";

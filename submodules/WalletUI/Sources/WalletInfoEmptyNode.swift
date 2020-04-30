@@ -95,13 +95,21 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
         self.addressNode.view.addGestureRecognizer(recognizer)
     }
     
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let localPoint = self.view.convert(point, to: self.addressNode.view)
+        if let result = self.addressNode.view.hitTest(localPoint, with: event) {
+            return result
+        }
+        return super.hitTest(point, with: event)
+    }
+    
     @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
             if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 switch gesture {
                 case .longTap:
-                    self.item?.displayAddressContextMenu(self, self.addressNode.frame)
+                    self.item?.displayAddressContextMenu(self, self.addressNode.view.convert(self.addressNode.bounds, to: self.view))
                 default:
                     break
                 }

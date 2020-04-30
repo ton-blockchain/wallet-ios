@@ -300,7 +300,11 @@ private final class WalletStorageInterfaceImpl: WalletStorageInterface {
     func localWalletConfiguration() -> Signal<LocalWalletConfiguration, NoError> {
         return self.mergedLocalWalletConfiguration()
         |> mapToSignal { value -> Signal<LocalWalletConfiguration, NoError> in
-            return .single(value.configuration)
+            return .single(LocalWalletConfiguration(
+                //mainNet: value.mainNet.configuration,
+                testNet: value.testNet.configuration,
+                activeNetwork: value.activeNetwork
+            ))
         }
         |> distinctUntilChanged
     }
@@ -323,14 +327,6 @@ private final class WalletStorageInterfaceImpl: WalletStorageInterface {
             }
         }
         |> ignoreValues
-    }
-    
-    func updateLocalWalletConfiguration(_ f: @escaping (LocalWalletConfiguration) -> LocalWalletConfiguration) -> Signal<Never, NoError> {
-        return self.updateMergedLocalWalletConfiguration { value in
-            var value = value
-            value.configuration = f(value.configuration)
-            return value
-        }
     }
 }
 
@@ -365,13 +361,19 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
         }
     }
     
-    func updateResolvedWalletConfiguration(source: LocalWalletConfigurationSource, blockchainName: String, resolvedValue: String) -> Signal<Never, NoError> {
-        return self.storageImpl.updateMergedLocalWalletConfiguration { configuration in
-            var configuration = configuration
-            configuration.configuration.source = source
-            configuration.configuration.blockchainName = blockchainName
-            configuration.resolved = ResolvedLocalWalletConfiguration(source: source, value: resolvedValue)
-            return configuration
+    func updateResolvedWalletConfiguration(configuration: LocalWalletConfiguration, source: LocalWalletConfigurationSource, resolvedConfig: String) -> Signal<Never, NoError> {
+        return self.storageImpl.updateMergedLocalWalletConfiguration { current in
+            var current = current
+            //current.mainNet.configuration = configuration.mainNet
+            current.testNet.configuration = configuration.testNet
+            current.activeNetwork = configuration.activeNetwork
+            /*if current.mainNet.configuration.source == source {
+                current.mainNet.resolved = ResolvedLocalWalletConfiguration(source: source, value: resolvedConfig)
+            }*/
+            if current.testNet.configuration.source == source {
+                current.testNet.resolved = ResolvedLocalWalletConfiguration(source: source, value: resolvedConfig)
+            }
+            return current
         }
     }
     
@@ -657,54 +659,94 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         
         let initialConfigValue = storage.mergedLocalWalletConfiguration()
         |> take(1)
-        |> mapToSignal { configuration -> Signal<(ResolvedLocalWalletConfiguration, String), NoError> in
-            if let resolved = configuration.resolved, resolved.source == configuration.configuration.source {
-                return .single((resolved, configuration.configuration.blockchainName))
+        |> mapToSignal { configuration -> Signal<EffectiveWalletConfiguration?, NoError> in
+            if let effective = configuration.effective {
+                return .single(effective)
             } else {
-                return .complete()
+                return .single(nil)
             }
         }
         
-        let updatedConfigValue = storage.localWalletConfiguration()
-        |> mapToSignal { configuration -> Signal<(ResolvedLocalWalletConfiguration, String), NoError> in
-            switch configuration.source {
+        let updatedConfigValue = storage.mergedLocalWalletConfiguration()
+        |> mapToSignal { configuration -> Signal<(source: LocalWalletConfigurationSource, blockchainName: String, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, config: String), NoError> in
+            switch configuration.effectiveSource.source {
             case let .url(url):
                 guard let parsedUrl = URL(string: url) else {
                     return .complete()
                 }
                 return download(url: parsedUrl)
                 |> retry(1.0, maxDelay: 5.0, onQueue: .mainQueue())
-                |> mapToSignal { data -> Signal<(ResolvedLocalWalletConfiguration, String), NoError> in
+                |> mapToSignal { data -> Signal<(source: LocalWalletConfigurationSource, blockchainName: String, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, config: String), NoError> in
                     if let string = String(data: data, encoding: .utf8) {
-                        return .single((ResolvedLocalWalletConfiguration(source: configuration.source, value: string), configuration.blockchainName))
+                        return .single((source: configuration.effectiveSource.source, blockchainName: configuration.effectiveSource.networkName, blockchainNetwork: configuration.activeNetwork, config: string))
                     } else {
                         return .complete()
                     }
                 }
             case let .string(string):
-                return .single((ResolvedLocalWalletConfiguration(source: configuration.source, value: string), configuration.blockchainName))
+                return .single((source: configuration.effectiveSource.source, blockchainName: configuration.effectiveSource.networkName, blockchainNetwork: configuration.activeNetwork, config: string))
             }
         }
         |> distinctUntilChanged(isEqual: { lhs, rhs in
-            return lhs.0 == rhs.0 && lhs.1 == rhs.1
+            if lhs.0 != rhs.0 {
+                return false
+            }
+            if lhs.1 != rhs.1 {
+                return false
+            }
+            if lhs.2 != rhs.2 {
+                return false
+            }
+            if lhs.3 != rhs.3 {
+                return false
+            }
+            return true
         })
-        |> afterNext { (resolved, _) in
+        |> afterNext { source, _, _, config in
             let _ = storage.updateMergedLocalWalletConfiguration({ current in
                 var current = current
-                current.resolved = resolved
+                /*if current.mainNet.configuration.source == source {
+                    current.mainNet.resolved = ResolvedLocalWalletConfiguration(source: source, value: config)
+                }*/
+                if current.testNet.configuration.source == source {
+                    current.testNet.resolved = ResolvedLocalWalletConfiguration(source: source, value: config)
+                }
                 return current
             }).start()
         }
         
-        let resolvedInitialConfig = (
-            initialConfigValue
-            |> then(updatedConfigValue)
-        )
-        |> take(1)
+        let resolvedInitialConfig = initialConfigValue
+        |> mapToSignal { value -> Signal<EffectiveWalletConfiguration, NoError> in
+            if let value = value {
+                return .single(value)
+            } else {
+                return Signal { subscriber in
+                    let update = updatedConfigValue.start()
+                    let disposable = (storage.mergedLocalWalletConfiguration()
+                    |> mapToSignal { configuration -> Signal<EffectiveWalletConfiguration, NoError> in
+                        if let effective = configuration.effective {
+                            return .single(effective)
+                        } else {
+                            return .complete()
+                        }
+                    }
+                    |> take(1)).start(next: { next in
+                        subscriber.putNext(next)
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                    
+                    return ActionDisposable {
+                        update.dispose()
+                        disposable.dispose()
+                    }
+                }
+            }
+        }
         
         let _ = (resolvedInitialConfig
-        |> deliverOnMainQueue).start(next: { (initialResolvedConfig, initialConfigBlockchainName) in
-            let walletContext = WalletContextImpl(basePath: documentsPath, storage: storage, config: initialResolvedConfig.value, blockchainName: initialConfigBlockchainName, presentationData: presentationData, navigationBarTheme: navigationBarTheme, window: mainWindow)
+        |> deliverOnMainQueue).start(next: { initialResolvedConfig in
+            let walletContext = WalletContextImpl(basePath: documentsPath, storage: storage, config: initialResolvedConfig.config, blockchainName: initialResolvedConfig.networkName, presentationData: presentationData, navigationBarTheme: navigationBarTheme, window: mainWindow)
             self.walletContext = walletContext
             
             let beginWithController: (ViewController) -> Void = { controller in
@@ -714,13 +756,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                         navigationController.viewControllers.last?.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                     }
                     
-                    var previousBlockchainName = initialConfigBlockchainName
+                    var previousBlockchainName = initialResolvedConfig.networkName
                     
                     let _ = (updatedConfigValue
-                    |> deliverOnMainQueue).start(next: { resolved, blockchainName in
-                        let _ = walletContext.tonInstance.validateConfig(config: resolved.value, blockchainName: blockchainName).start(error: { _ in
+                    |> deliverOnMainQueue).start(next: { _, blockchainName, blockchainNetwork, config in
+                        let _ = walletContext.tonInstance.validateConfig(config: config, blockchainName: blockchainName).start(error: { _ in
                         }, completed: {
-                            let _ = walletContext.tonInstance.updateConfig(config: resolved.value, blockchainName: blockchainName).start()
+                            walletContext.tonInstance.updateConfig(config: config, blockchainName: blockchainName)
                             
                             if previousBlockchainName != blockchainName {
                                 previousBlockchainName = blockchainName
@@ -734,7 +776,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                                 }, completed: { [weak overlayController] in
                                     overlayController?.dismiss()
                                     
-                                    navigationController.setViewControllers([WalletSplashScreen(context: walletContext, mode: .intro, walletCreatedPreloadState: nil)], animated: true)
+                                    navigationController.setViewControllers([WalletSplashScreen(context: walletContext, blockchainNetwork: blockchainNetwork, mode: .intro, walletCreatedPreloadState: nil)], animated: true)
                                 })
                             }
                         })
@@ -757,31 +799,41 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             |> deliverOnMainQueue).start(next: { records, publicKey in
                 if let record = records.first {
                     if let publicKey = publicKey {
-                        if record.info.encryptedSecret.publicKey == publicKey {
-                            if record.exportCompleted {
-                                let _ = (walletAddress(publicKey: record.info.publicKey, tonInstance: walletContext.tonInstance)
-                                |> deliverOnMainQueue).start(next: { address in
-                                    let infoScreen = WalletInfoScreen(context: walletContext, walletInfo: record.info, address: address, enableDebugActions: false)
+                        let recordPublicKey: Data
+                        switch record.info {
+                        case let .ready(info, _, _):
+                            recordPublicKey = info.encryptedSecret.publicKey
+                        case let .imported(info):
+                            recordPublicKey = info.encryptedSecret.publicKey
+                        }
+                        if recordPublicKey == publicKey {
+                            switch record.info {
+                            case let .ready(info, exportCompleted, _):
+                                if exportCompleted {
+                                    let infoScreen = WalletInfoScreen(context: walletContext, walletInfo: info, blockchainNetwork: initialResolvedConfig.activeNetwork, enableDebugActions: false)
                                     beginWithController(infoScreen)
-                                })
-                            } else {
-                                let createdScreen = WalletSplashScreen(context: walletContext, mode: .created(walletInfo: record.info, words: nil), walletCreatedPreloadState: nil)
+                                } else {
+                                    let createdScreen = WalletSplashScreen(context: walletContext, blockchainNetwork: initialResolvedConfig.activeNetwork, mode: .created(walletInfo: info, words: nil), walletCreatedPreloadState: nil)
+                                    beginWithController(createdScreen)
+                                }
+                            case let .imported(info):
+                                let createdScreen = WalletSplashScreen(context: walletContext, blockchainNetwork: initialResolvedConfig.activeNetwork, mode: .successfullyImported(importedInfo: info), walletCreatedPreloadState: nil)
                                 beginWithController(createdScreen)
                             }
                         } else {
-                            let splashScreen = WalletSplashScreen(context: walletContext, mode: .secureStorageReset(.changed), walletCreatedPreloadState: nil)
+                            let splashScreen = WalletSplashScreen(context: walletContext, blockchainNetwork: initialResolvedConfig.activeNetwork, mode: .secureStorageReset(.changed), walletCreatedPreloadState: nil)
                             beginWithController(splashScreen)
                         }
                     } else {
-                        let splashScreen = WalletSplashScreen(context: walletContext, mode: WalletSplashMode.secureStorageReset(.notAvailable), walletCreatedPreloadState: nil)
+                        let splashScreen = WalletSplashScreen(context: walletContext, blockchainNetwork: initialResolvedConfig.activeNetwork, mode: WalletSplashMode.secureStorageReset(.notAvailable), walletCreatedPreloadState: nil)
                         beginWithController(splashScreen)
                     }
                 } else {
                     if publicKey != nil {
-                        let splashScreen = WalletSplashScreen(context: walletContext, mode: .intro, walletCreatedPreloadState: nil)
+                        let splashScreen = WalletSplashScreen(context: walletContext, blockchainNetwork: initialResolvedConfig.activeNetwork, mode: .intro, walletCreatedPreloadState: nil)
                         beginWithController(splashScreen)
                     } else {
-                        let splashScreen = WalletSplashScreen(context: walletContext, mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil)
+                        let splashScreen = WalletSplashScreen(context: walletContext, blockchainNetwork: initialResolvedConfig.activeNetwork, mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil)
                         beginWithController(splashScreen)
                     }
                 }
@@ -796,10 +848,19 @@ private enum DownloadFileError {
     case network
 }
 
+private let urlSession: URLSession = {
+    let config = URLSessionConfiguration.default
+    config.requestCachePolicy = .reloadIgnoringLocalCacheData
+    config.urlCache = nil
+
+    let session = URLSession(configuration: config)
+    return session
+}()
+
 private func download(url: URL) -> Signal<Data, DownloadFileError> {
     return Signal { subscriber in
         let completed = Atomic<Bool>(value: false)
-        let downloadTask = URLSession.shared.downloadTask(with: url, completionHandler: { location, _, error in
+        let downloadTask = urlSession.downloadTask(with: url, completionHandler: { location, _, error in
             let _ = completed.swap(true)
             if let location = location, let data = try? Data(contentsOf: location) {
                 subscriber.putNext(data)
@@ -823,13 +884,77 @@ struct ResolvedLocalWalletConfiguration: Codable, Equatable {
     var value: String
 }
 
-struct MergedLocalWalletConfiguration: Codable, Equatable {
-    var configuration: LocalWalletConfiguration
+struct MergedLocalBlockchainConfiguration: Codable, Equatable {
+    var configuration: WalletCore.LocalBlockchainConfiguration
     var resolved: ResolvedLocalWalletConfiguration?
+}
+
+struct EffectiveWalletConfiguration: Equatable {
+    let networkName: String
+    let config: String
+    let activeNetwork: LocalWalletConfiguration.ActiveNetwork
+}
+
+struct EffectiveWalletConfigurationSource: Equatable {
+    let networkName: String
+    let source: LocalWalletConfigurationSource
+}
+
+struct MergedLocalWalletConfiguration: Codable, Equatable {
+    //var mainNet: MergedLocalBlockchainConfiguration
+    var testNet: MergedLocalBlockchainConfiguration
+    var activeNetwork: LocalWalletConfiguration.ActiveNetwork
+    
+    var effective: EffectiveWalletConfiguration? {
+        switch self.activeNetwork {
+        /*case .mainNet:
+            if let resolved = self.mainNet.resolved, resolved.source == self.mainNet.configuration.source {
+                return EffectiveWalletConfiguration(networkName: "mainnet", config: resolved.value, activeNetwork: .mainNet)
+            } else {
+                return nil
+            }*/
+        case .testNet:
+            if let resolved = self.testNet.resolved, resolved.source == self.testNet.configuration.source {
+                return EffectiveWalletConfiguration(networkName: self.testNet.configuration.customId ?? "testnet2", config: resolved.value, activeNetwork: .testNet)
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    var effectiveSource: EffectiveWalletConfigurationSource {
+        switch self.activeNetwork {
+        /*case .mainNet:
+            return EffectiveWalletConfigurationSource(
+                networkName: "mainnet",
+                source: self.mainNet.configuration.source
+            )*/
+        case .testNet:
+            return EffectiveWalletConfigurationSource(
+                networkName: self.testNet.configuration.customId ?? "testnet2",
+                source: self.testNet.configuration.source
+            )
+        }
+    }
 }
 
 private extension MergedLocalWalletConfiguration {
     static var `default`: MergedLocalWalletConfiguration {
-        return MergedLocalWalletConfiguration(configuration: LocalWalletConfiguration(source: .url("https://test.ton.org/config.json"), blockchainName: "testnet2"), resolved: nil)
+        return MergedLocalWalletConfiguration(
+            /*mainNet: MergedLocalBlockchainConfiguration(
+                configuration: LocalBlockchainConfiguration(
+                    source: .url("https://ton.org/config.json"),
+                    customId: nil
+                ),
+                resolved: nil),*/
+            testNet: MergedLocalBlockchainConfiguration(
+                configuration: LocalBlockchainConfiguration(
+                    source: .url("https://ton.org/config-test.json"),
+                    customId: nil
+                ),
+                resolved: nil
+            ),
+            activeNetwork: .testNet
+        )
     }
 }

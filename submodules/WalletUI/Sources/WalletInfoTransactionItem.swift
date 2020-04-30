@@ -240,7 +240,11 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                 case let .completed(transaction):
                     if transaction.outMessages.isEmpty {
                         directionText = ""
-                        text = item.strings.Wallet_Info_UnknownTransaction
+                        if transaction.isInitialization {
+                            text = "Wallet Initialization"
+                        } else {
+                            text = item.strings.Wallet_Info_UnknownTransaction
+                        }
                     } else {
                         directionText = item.strings.Wallet_Info_TransactionTo
                         for message in transaction.outMessages {
@@ -356,7 +360,15 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             let titleSpacing: CGFloat = 2.0
             let textSpacing: CGFloat = 2.0
             
-            contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height + titleSpacing + textLayout.size.height + bottomInset)
+            var contentHeight = topInset
+            if transferredValue != 0 {
+                contentHeight += titleLayout.size.height + titleSpacing
+            } else {
+                contentHeight -= 2.0
+            }
+            contentHeight += textLayout.size.height + bottomInset
+            
+            contentSize = CGSize(width: params.width, height: contentHeight)
             if !descriptionLayout.size.width.isZero {
                 contentSize.height += descriptionLayout.size.height + textSpacing
             }
@@ -396,6 +408,12 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     let _ = dateApply()
                     let _ = directionApply()
                     
+                    let titleIsHidden = transferredValue == 0
+                    strongSelf.titleNode.isHidden = titleIsHidden
+                    strongSelf.titleSignNode.isHidden = titleIsHidden
+                    strongSelf.directionNode.isHidden = titleIsHidden
+                    strongSelf.iconNode.isHidden = titleIsHidden
+                    
                     if strongSelf.backgroundNode.supernode != nil {
                         strongSelf.backgroundNode.removeFromSupernode()
                     }
@@ -419,18 +437,31 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     let directionFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 3.0, y: titleFrame.maxY - directionLayout.size.height - 1.0), size: directionLayout.size)
                     strongSelf.directionNode.frame = directionFrame
                     
-                    let textFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + titleSpacing), size: textLayout.size)
+                    let textOffsetY: CGFloat
+                    if titleIsHidden {
+                        textOffsetY = topInset
+                    } else {
+                        textOffsetY = titleFrame.maxY + titleSpacing
+                    }
+                    
+                    let textFrame = CGRect(origin: CGPoint(x: leftInset, y: textOffsetY), size: textLayout.size)
                     strongSelf.textNode.frame = textFrame
                     
                     let descriptionFrame = CGRect(origin: CGPoint(x: leftInset, y: textFrame.maxY + textSpacing), size: descriptionLayout.size)
                     strongSelf.descriptionNode.frame = descriptionFrame
-                    strongSelf.feesNode.frame = CGRect(origin: CGPoint(x: leftInset, y: descriptionFrame.maxY + textSpacing), size: feesLayout.size)
+                    strongSelf.feesNode.frame = CGRect(origin: CGPoint(x: leftInset, y: descriptionFrame.maxY + (descriptionFrame.height.isZero ? 0.0 : textSpacing)), size: feesLayout.size)
                     
                     let dateFrame = CGRect(origin: CGPoint(x: params.width - leftInset - dateLayout.size.width, y: topInset), size: dateLayout.size)
                     strongSelf.dateNode.frame = dateFrame
                     
                     if let image = strongSelf.lockIconNode.image {
-                        strongSelf.lockIconNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - image.size.width + 4.0, y: dateFrame.maxY + 17.0), size: image.size)
+                        let lockIconOffset: CGFloat
+                        if titleIsHidden {
+                            lockIconOffset = 8.0
+                        } else {
+                            lockIconOffset = 17.0
+                        }
+                        strongSelf.lockIconNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - image.size.width + 4.0, y: dateFrame.maxY + lockIconOffset), size: image.size)
                     }
                     
                     var hasEncryptedComment = false

@@ -7,6 +7,7 @@ import Display
 import QrCode
 import AnimatedStickerNode
 import SolidRoundedButtonNode
+import WalletCore
 
 private func shareInvoiceQrCode(context: WalletContext, invoice: String) {
     let _ = (qrCode(string: invoice, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem")))
@@ -39,13 +40,15 @@ public enum WalletReceiveScreenMode {
 
 final class WalletReceiveScreen: ViewController {
     private let context: WalletContext
+    private let blockchainNetwork: LocalWalletConfiguration.ActiveNetwork
     private let mode: WalletReceiveScreenMode
     private var presentationData: WalletPresentationData
     
     private let idleTimerExtensionDisposable: Disposable
     
-    public init(context: WalletContext, mode: WalletReceiveScreenMode) {
+    public init(context: WalletContext, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, mode: WalletReceiveScreenMode) {
         self.context = context
+        self.blockchainNetwork = blockchainNetwork
         self.mode = mode
         
         self.presentationData = context.presentationData
@@ -80,7 +83,7 @@ final class WalletReceiveScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WalletReceiveScreenNode(context: self.context, presentationData: self.presentationData, mode: self.mode)
+        self.displayNode = WalletReceiveScreenNode(context: self.context, blockchainNetwork: self.blockchainNetwork, presentationData: self.presentationData, mode: self.mode)
         (self.displayNode as! WalletReceiveScreenNode).openCreateInvoice = { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -143,6 +146,7 @@ private func urlForMode(_ mode: WalletReceiveScreenMode) -> String {
 
 private final class WalletReceiveScreenNode: ViewControllerTracingNode {
     private let context: WalletContext
+    private let blockchainNetwork: LocalWalletConfiguration.ActiveNetwork
     private var presentationData: WalletPresentationData
     private let mode: WalletReceiveScreenMode
     
@@ -163,8 +167,9 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
     var openCreateInvoice: (() -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, CGRect, String) -> Void)?
   
-    init(context: WalletContext, presentationData: WalletPresentationData, mode: WalletReceiveScreenMode) {
+    init(context: WalletContext, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, presentationData: WalletPresentationData, mode: WalletReceiveScreenMode) {
         self.context = context
+        self.blockchainNetwork = blockchainNetwork
         self.presentationData = presentationData
         self.mode = mode
         
@@ -234,13 +239,21 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
         let textFont = Font.regular(16.0)
         let secondaryTextColor = self.presentationData.theme.list.itemSecondaryTextColor
         let url = urlForMode(self.mode)
+        let headerString: String
+        switch self.blockchainNetwork {
+        /*case .mainNet:
+            headerString = "Share this link with other Gram wallet owners to receive Grams from them."*/
+        case .testNet:
+            headerString = self.presentationData.strings.Wallet_Receive_ShareUrlInfo
+        }
+        
         switch self.mode {
             case .receive:
-                self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Wallet_Receive_ShareUrlInfo, font: textFont, textColor: secondaryTextColor)
+                self.textNode.attributedText = NSAttributedString(string: headerString, font: textFont, textColor: secondaryTextColor)
                 self.buttonNode.title = self.presentationData.strings.Wallet_Receive_ShareAddress
                 self.secondaryButtonNode.setTitle(self.presentationData.strings.Wallet_Receive_CreateInvoice, with: Font.regular(17.0), with: self.presentationData.theme.list.itemAccentColor, for: .normal)
             case .invoice:
-                self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Wallet_Receive_ShareUrlInfo, font: textFont, textColor: secondaryTextColor, paragraphAlignment: .center)
+                self.textNode.attributedText = NSAttributedString(string: headerString, font: textFont, textColor: secondaryTextColor, paragraphAlignment: .center)
                 self.buttonNode.title = self.presentationData.strings.Wallet_Receive_ShareInvoiceUrl
         }
         

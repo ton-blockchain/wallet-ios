@@ -188,6 +188,7 @@ private func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor:
 
 final class WalletTransactionInfoScreen: ViewController {
     private let context: WalletContext
+    private let blockchainNetwork: LocalWalletConfiguration.ActiveNetwork
     private let walletInfo: WalletInfo?
     private var walletTransaction: WalletInfoTransaction
     private let walletState: Signal<(CombinedWalletState, Bool), NoError>
@@ -198,8 +199,9 @@ final class WalletTransactionInfoScreen: ViewController {
     private var combinedState: CombinedWalletState?
     private var reloadingState = false
         
-    public init(context: WalletContext, walletInfo: WalletInfo?, walletTransaction: WalletInfoTransaction, walletState: Signal<(CombinedWalletState, Bool), NoError>, enableDebugActions: Bool, decryptionKeyUpdated: @escaping (WalletTransactionDecryptionKey) -> Void) {
+    public init(context: WalletContext, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, walletInfo: WalletInfo?, walletTransaction: WalletInfoTransaction, walletState: Signal<(CombinedWalletState, Bool), NoError>, enableDebugActions: Bool, decryptionKeyUpdated: @escaping (WalletTransactionDecryptionKey) -> Void) {
         self.context = context
+        self.blockchainNetwork = blockchainNetwork
         self.walletInfo = walletInfo
         self.walletTransaction = walletTransaction
         self.walletState = walletState
@@ -240,7 +242,7 @@ final class WalletTransactionInfoScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WalletTransactionInfoScreenNode(context: self.context, presentationData: self.presentationData, walletTransaction: self.walletTransaction, decryptionKeyUpdated: self.decryptionKeyUpdated)
+        self.displayNode = WalletTransactionInfoScreenNode(controller: self, context: self.context, presentationData: self.presentationData, walletTransaction: self.walletTransaction, decryptionKeyUpdated: self.decryptionKeyUpdated)
         (self.displayNode as! WalletTransactionInfoScreenNode).send = { [weak self] address in
             guard let strongSelf = self else {
                 return
@@ -260,7 +262,7 @@ final class WalletTransactionInfoScreen: ViewController {
                 var randomId: Int64 = 0
                 arc4random_buf(&randomId, 8)
                 if let walletInfo = strongSelf.walletInfo {
-                    strongSelf.push(walletSendScreen(context: strongSelf.context, randomId: randomId, walletInfo: walletInfo, address: address))
+                    strongSelf.push(walletSendScreen(context: strongSelf.context, randomId: randomId, walletInfo: walletInfo, blockchainNetwork: strongSelf.blockchainNetwork, address: address))
                     strongSelf.dismiss()
                 }
             }
@@ -399,6 +401,7 @@ private let amountFont = Font.medium(48.0)
 private let fractionalFont = Font.medium(24.0)
 
 private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
+    private weak var controller: WalletTransactionInfoScreen?
     private let context: WalletContext
     private var presentationData: WalletPresentationData
     private var walletTransaction: WalletInfoTransaction
@@ -430,7 +433,8 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
     var displayFeesTooltip: ((ASDisplayNode, CGRect) -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, CGRect, String) -> Void)?
   
-    init(context: WalletContext, presentationData: WalletPresentationData, walletTransaction: WalletInfoTransaction, decryptionKeyUpdated: @escaping (WalletTransactionDecryptionKey) -> Void) {
+    init(controller: WalletTransactionInfoScreen, context: WalletContext, presentationData: WalletPresentationData, walletTransaction: WalletInfoTransaction, decryptionKeyUpdated: @escaping (WalletTransactionDecryptionKey) -> Void) {
+        self.controller = controller
         self.context = context
         self.presentationData = presentationData
         self.walletTransaction = walletTransaction
@@ -556,6 +560,7 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
             amountColor = self.presentationData.theme.info.incomingFundsTitleColor
         }
         self.amountNode.balance = (amountString, amountColor)
+        self.amountNode.isHidden = transferredValue == 0
                 
         var feesString: String = ""
         if case let .completed(transaction) = walletTransaction {
@@ -595,6 +600,22 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
 
             self.buttonNode.pressed = { [weak self] in
                 self?.send?(address)
+            }
+        } else {
+            var text = "Empty Transaction"
+            switch self.walletTransaction {
+            case let .completed(transaction):
+                if transaction.isInitialization {
+                    text = "Wallet Initialization"
+                }
+            case .pending:
+                break
+            }
+            self.addressTextNode.attributedText = NSAttributedString(string: text, font: addressFont, textColor: textColor, paragraphAlignment: .justified)
+            self.buttonNode.title = "Close"
+
+            self.buttonNode.pressed = { [weak self] in
+                self?.controller?.dismiss()
             }
         }
         

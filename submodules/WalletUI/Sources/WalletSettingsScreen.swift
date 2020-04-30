@@ -103,7 +103,7 @@ private func walletSettingsControllerEntries(presentationData: WalletPresentatio
     return entries
 }
 
-public func walletSettingsController(context: WalletContext, walletInfo: WalletInfo) -> ViewController {
+public func walletSettingsController(context: WalletContext, walletInfo: WalletInfo, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork) -> ViewController {
     let statePromise = ValuePromise(WalletSettingsControllerState(), ignoreRepeated: true)
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
@@ -128,7 +128,7 @@ public func walletSettingsController(context: WalletContext, walletInfo: WalletI
                 let _ = (walletRestoreWords(tonInstance: context.tonInstance, publicKey: walletInfo.publicKey, decryptedSecret:  decryptedSecret, localPassword: serverSalt)
                 |> deliverOnMainQueue).start(next: { [weak controller] wordList in
                     controller?.dismiss()
-                    pushControllerImpl?(WalletWordDisplayScreen(context: context, walletInfo: walletInfo, wordList: wordList, mode: .export, walletCreatedPreloadState: nil))
+                    pushControllerImpl?(WalletWordDisplayScreen(context: context, blockchainNetwork: blockchainNetwork, walletInfo: walletInfo, wordList: wordList, mode: .export, walletCreatedPreloadState: nil))
                     }, error: { [weak controller] _ in
                         controller?.dismiss()
                 })
@@ -152,7 +152,7 @@ public func walletSettingsController(context: WalletContext, walletInfo: WalletI
                     controller?.dismiss()
                 }, completed: { [weak controller] in
                     controller?.dismiss()
-                    replaceAllWalletControllersImpl?(WalletSplashScreen(context: context, mode: .intro, walletCreatedPreloadState: nil))
+                    replaceAllWalletControllersImpl?(WalletSplashScreen(context: context, blockchainNetwork: blockchainNetwork, mode: .intro, walletCreatedPreloadState: nil))
                 })
             })
         ]), ActionSheetItemGroup(items: [

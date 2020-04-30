@@ -16,6 +16,7 @@ public enum WalletWordDisplayScreenMode {
 
 public final class WalletWordDisplayScreen: ViewController {
     private let context: WalletContext
+    private let blockchainNetwork: LocalWalletConfiguration.ActiveNetwork
     private var presentationData: WalletPresentationData
     private let walletInfo: WalletInfo
     private let wordList: [String]
@@ -24,10 +25,11 @@ public final class WalletWordDisplayScreen: ViewController {
     private let startTime: Double
     private let idleTimerExtensionDisposable: Disposable
     
-    private let walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?
+    private let walletCreatedPreloadState: Promise<WalletCreatedPreloadState?>?
     
-    public init(context: WalletContext, walletInfo: WalletInfo, wordList: [String], mode: WalletWordDisplayScreenMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?) {
+    public init(context: WalletContext, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, walletInfo: WalletInfo, wordList: [String], mode: WalletWordDisplayScreenMode, walletCreatedPreloadState: Promise<WalletCreatedPreloadState?>?) {
         self.context = context
+        self.blockchainNetwork = blockchainNetwork
         self.walletInfo = walletInfo
         self.wordList = wordList
         self.mode = mode
@@ -97,7 +99,7 @@ public final class WalletWordDisplayScreen: ViewController {
                     }
                 }
                 wordIndices.sort()
-                strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, mode: .verify(strongSelf.walletInfo, strongSelf.wordList, wordIndices), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, blockchainNetwork: strongSelf.blockchainNetwork, mode: .verify(strongSelf.walletInfo, strongSelf.wordList, wordIndices), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
             }
         })
         
