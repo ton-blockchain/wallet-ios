@@ -949,8 +949,8 @@ private extension MergedLocalWalletConfiguration {
                 resolved: nil),*/
             testNet: MergedLocalBlockchainConfiguration(
                 configuration: LocalBlockchainConfiguration(
-                    source: .url("https://ton.org/config-test.json"),
-                    customId: nil
+                    source: .url("https://newton-blockchain.github.io/global.config.json"),
+                    customId: "testnet2"
                 ),
                 resolved: nil
             ),
