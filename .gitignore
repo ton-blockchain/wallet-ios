@@ -64,3 +64,7 @@ build-input/data
 build-input/data/*
 build-input/gen
 build-input/gen/*
+.vscode
+env.sh
+bazel-wallet-ios
+bazel-wallet-ios/* 

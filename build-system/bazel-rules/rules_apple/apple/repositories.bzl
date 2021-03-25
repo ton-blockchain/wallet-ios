@@ -59,7 +59,7 @@ def apple_rules_dependencies(ignore_version_differences = False):
         git_repository,
         name = "build_bazel_rules_swift",
         remote = "https://github.com/bazelbuild/rules_swift.git",
-        branch = "master",
+        commit = "cf5857a353a1fdc2db6e642807ceff83d7969bd0",
     )
 
     _maybe(

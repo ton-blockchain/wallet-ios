@@ -409,15 +409,15 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
     }
     
     window.invalidateDeferScreenEdgeGestureImpl = { [weak hostView] in
-        return hostView?.invalidateDeferScreenEdgeGesture?()
+        return hostView!.invalidateDeferScreenEdgeGesture!()
     }
     
     window.invalidatePrefersOnScreenNavigationHiddenImpl = { [weak hostView] in
-        return hostView?.invalidatePrefersOnScreenNavigationHidden?()
+        return hostView!.invalidatePrefersOnScreenNavigationHidden!()
     }
     
     window.invalidateSupportedOrientationsImpl = { [weak hostView] in
-        return hostView?.invalidateSupportedOrientations?()
+        return hostView!.invalidateSupportedOrientations!()
     }
     
     window.cancelInteractiveKeyboardGesturesImpl = { [weak hostView] in
