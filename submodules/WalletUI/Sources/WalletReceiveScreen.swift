@@ -303,7 +303,7 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
         if self.urlTextNode.attributedText?.string.isEmpty ?? true {
             var url = urlForMode(self.mode)
             if case .receive = self.mode {
-                url = url + "?"
+                url = String(url.dropFirst(15))
             }
             
             let addressFont: UIFont
