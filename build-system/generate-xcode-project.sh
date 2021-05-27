@@ -33,7 +33,7 @@ rm -rf "$GEN_DIRECTORY/${APP_TARGET}.tulsiproj"
 rm -rf "$TULSI_APP"
 
 pushd "build-system/tulsi"
-"$BAZEL" build //:tulsi --xcode_version="$XCODE_VERSION"
+"$BAZEL" build //:tulsi --use_top_level_targets_for_symlinks --xcode_version="$XCODE_VERSION"
 popd
 
 mkdir -p "$TULSI_DIRECTORY"
