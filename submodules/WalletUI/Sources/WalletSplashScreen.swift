@@ -160,7 +160,7 @@ public final class WalletSplashScreen: ViewController {
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Wallet_Intro_NotNow, close: self.presentationData.strings.Wallet_Navigation_Close)))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.statusBarStyle
-        self.navigationPresentation = .modalInLargeLayout
+        self.navigationPresentation = .default
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
