@@ -73,6 +73,17 @@ plist_fragment(
     <string>TON Wallet</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>org.mycompany.TonWallet-iOS</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>ton</string>
+            </array>
+        </dict>
+    </array>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSRequiresIPhoneOS</key>
