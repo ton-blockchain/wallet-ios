@@ -174,6 +174,7 @@ swift_library(
         "//submodules/WalletCore:WalletCore",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/OverlayStatusController:OverlayStatusController",
+		"//submodules/WalletUrl:WalletUrl",
     ],
 )
 
