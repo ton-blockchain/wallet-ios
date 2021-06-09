@@ -68,7 +68,7 @@ public final class WalletInfoScreen: ViewController {
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Wallet_Navigation_Back, close: self.presentationData.strings.Wallet_Navigation_Close)))
         
         self.statusBar.statusBarStyle = .White
-        self.navigationPresentation = .default
+        self.navigationPresentation = .modalInLargeLayout
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
