@@ -224,9 +224,9 @@ private struct WalletConfigurationScreenState: Equatable {
             }
         }
         
-        if self.configuration.testNet.customId == "mainnet" {
-            return nil
-        }
+//        if self.configuration.testNet.customId == "mainnet" {
+//            return nil
+//        }
         
         return LocalWalletConfiguration(
             //mainNet: LocalBlockchainConfiguration(source: mainSource, customId: nil),
@@ -244,9 +244,9 @@ private struct WalletConfigurationScreenState: Equatable {
             blockchainConfiguration = self.configuration.testNet
         }
         
-        if self.configuration.testNet.customId == "mainnet" {
-            return true
-        }
+//        if self.configuration.testNet.customId == "mainnet" {
+//            return true
+//        }
         
         switch blockchainConfiguration.source {
         case .url:
