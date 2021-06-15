@@ -26,6 +26,7 @@ mkdir -p "$OUT_DIR"
 mkdir -p "$OUT_DIR/build"
 cd "$OUT_DIR/build"
 
+git_executable_path="/usr/bin/git"
 openssl_path="$openssl_base_path"
 echo "OpenSSL path = ${openssl_path}"
 openssl_crypto_library="${openssl_path}/lib/libcrypto.a"
@@ -35,6 +36,7 @@ options="$options -DOPENSSL_CRYPTO_LIBRARY=${openssl_crypto_library}"
 options="$options -DOPENSSL_INCLUDE_DIR=${openssl_path}/include"
 options="$options -DOPENSSL_LIBRARIES=${openssl_crypto_library}"
 options="$options -DCMAKE_BUILD_TYPE=Release"
+options="$options -DGIT_EXECUTABLE=${git_executable_path}"
 
 build="build-${arch}"
 install="install-${arch}"
@@ -54,7 +56,7 @@ rm -rf $build
 mkdir -p $build
 mkdir -p $install
 cd $build
-cmake $td_path $options -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" -DIOS_PLATFORM=${ios_platform} -DTON_ARCH= -DCMAKE_INSTALL_PREFIX=../${install}
+cmake $td_path $options -DTON_ONLY_TONLIB=ON -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" -DIOS_PLATFORM=${ios_platform} -DTON_ARCH= -DCMAKE_INSTALL_PREFIX=../${install}
 CORE_COUNT=`sysctl -n hw.logicalcpu`
 make -j$CORE_COUNT install || exit
 cd ..
