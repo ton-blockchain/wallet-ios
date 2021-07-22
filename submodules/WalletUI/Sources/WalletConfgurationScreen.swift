@@ -157,7 +157,7 @@ private enum WalletConfigurationScreenEntry: ItemListNodeEntry, Equatable {
         case let .blockchainName(theme, strings, title, value):
             return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: ""), text: value, placeholder: title, type: .regular(capitalization: false, autocorrection: false), sectionId: self.section, textUpdated: { value in
                 arguments.updateBlockchainName(value)
-            }, action: {})
+			}, processPaste: { $0.lowercased() }, action: {})
         case let .blockchainNameInfo(theme, text):
             return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
