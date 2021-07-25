@@ -8,6 +8,7 @@ import SwiftSignalKit
 import MergeLists
 import AnimatedStickerNode
 import WalletCore
+import WebKit
 
 private class WalletInfoTitleView: UIView, NavigationBarTitleView {
     private let buttonView: HighlightTrackingButton
@@ -130,7 +131,21 @@ public final class WalletInfoScreen: ViewController {
                 }
                 strongSelf.push(WalletReceiveScreen(context: strongSelf.context, blockchainNetwork: configuration.activeNetwork, mode: .receive(address: strongSelf.walletInfo.address)))
             })
-        }, openTransaction: { [weak self] transaction in
+		}, buyAction: { [weak self] in
+			guard let strongSelf = self else { return }
+			let baseUrl = "ton.org"
+//			let widgetId = ""
+//			let wallet = strongSelf.walletInfo.address
+//			let ticker = ""
+			
+			let urlString = "https://\(baseUrl)" //"/?widget_id=\(widgetId)&address=\(wallet)&currency=\(ticker)"
+			guard let url = URL(string: urlString) else { return }
+			
+			let webVC = BuyGramsScreen(with: url, context: strongSelf.context)
+			let container = UINavigationController(rootViewController: webVC)
+			
+			strongSelf.present(container, animated: true)
+		}, openTransaction: { [weak self] transaction in
             guard let strongSelf = self else {
                 return
             }
@@ -157,6 +172,35 @@ public final class WalletInfoScreen: ViewController {
         
         (self.displayNode as! WalletInfoScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
     }
+}
+
+private final class BuyGramsScreen: ViewController, WKNavigationDelegate {
+	
+	private let webView = WKWebView()
+	
+	init(with url: URL, context: WalletContext) {
+		super.init(navigationBarPresentationData: nil)
+		title = "Buy TON Coins"
+		
+		let request = URLRequest(url: url)
+		webView.load(request)
+		webView.allowsBackForwardNavigationGestures = true
+		webView.navigationDelegate = self
+		navigationItem.leftBarButtonItem = UIBarButtonItem(title: context.presentationData.strings.Wallet_Navigation_Close, style: .plain, target: self, action: #selector(closeTapped))
+	}
+	
+	required init(coder aDecoder: NSCoder) {
+		fatalError("init(coder:) has not been implemented")
+	}
+	
+	override func loadView() {
+		view = webView
+	}
+	
+	@objc
+	private func closeTapped() {
+		dismiss()
+	}
 }
 
 final class WalletInfoBalanceNode: ASDisplayNode {
@@ -287,7 +331,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
     private let headerBackgroundNode: ASDisplayNode
     private let headerCornerNode: ASImageNode
     
-    init(presentationData: WalletPresentationData, hasActions: Bool, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void) {
+	init(presentationData: WalletPresentationData, hasActions: Bool, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, buyAction: @escaping () -> Void) {
         self.hasActions = hasActions
         
         self.balanceNode = WalletInfoBalanceNode(dateTimeFormat: presentationData.dateTimeFormat)
@@ -322,8 +366,8 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         self.receiveButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Receive, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
         self.receiveGramsButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_ReceiveGrams, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
         self.sendButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Send, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/SendButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
-		// FIXME: title
-		self.buyGramsButtonNode = SolidRoundedButtonNode(title: "Buy TON coins", icon: nil, theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
+		// TODO: localized title
+		self.buyGramsButtonNode = SolidRoundedButtonNode(title: "Buy TON Coins", icon: nil, theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
         
         self.refreshNode = WalletRefreshNode(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
         
@@ -351,7 +395,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
             sendAction()
         }
 		self.buyGramsButtonNode.pressed = {
-			print("‼️ Pressed ‼️")
+			buyAction()
 		}
     }
     
@@ -617,7 +661,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     private var watchCombinedStateDisposable: Disposable?
     private var refreshProgressDisposable: Disposable?
     
-    init(context: WalletContext, presentationData: WalletPresentationData, walletInfo: WalletInfo, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, openTransaction: @escaping (WalletInfoTransaction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+	init(context: WalletContext, presentationData: WalletPresentationData, walletInfo: WalletInfo, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, buyAction: @escaping () -> Void, openTransaction: @escaping (WalletInfoTransaction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.walletInfo = walletInfo
@@ -625,7 +669,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         self.openTransaction = openTransaction
         self.present = present
         
-        self.headerNode = WalletInfoHeaderNode(presentationData: presentationData, hasActions: true, sendAction: sendAction, receiveAction: receiveAction)
+        self.headerNode = WalletInfoHeaderNode(presentationData: presentationData, hasActions: true, sendAction: sendAction, receiveAction: receiveAction, buyAction: buyAction)
         
         self.listNode = ListView()
         self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
