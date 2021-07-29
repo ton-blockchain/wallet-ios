@@ -199,7 +199,11 @@ private final class BuyGramsScreen: ViewController, WKNavigationDelegate {
 	
 	@objc
 	private func closeTapped() {
-		dismiss()
+		if let container = navigationController {
+			container.dismiss(animated: true)
+		} else {
+			dismiss()
+		}
 	}
 }
 
@@ -435,7 +439,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         let minHeaderY = navigationHeight - 44.0 + floor((44.0 - minHeaderHeight) / 2.0)
         let maxHeaderY = floor((size.height - balanceSize.height) / 2.0 - balanceSubtitleSize.height)
         let headerPositionTransition: CGFloat = max(0.0, (effectiveOffset - minHeaderOffset) / (maxOffset - minHeaderOffset))
-        let headerY = headerPositionTransition * maxHeaderY + (1.0 - headerPositionTransition) * minHeaderY
+		let headerY = headerPositionTransition * maxHeaderY * 0.85 + (1.0 - headerPositionTransition) * minHeaderY
         let headerScale = headerScaleTransition * maxHeaderScale + (1.0 - headerScaleTransition) * minHeaderScale
         
         let refreshSize = CGSize(width: 0.0, height: 0.0)
