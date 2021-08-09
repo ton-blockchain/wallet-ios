@@ -422,7 +422,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
             }
         }
         
-        if string.count > 1, let item = self.item, let processPaste = item.processPaste {
+        if string.count >= 1, let item = self.item, let processPaste = item.processPaste {
             let result = processPaste(string)
             if result != string {
                 var text = textField.text ?? ""
