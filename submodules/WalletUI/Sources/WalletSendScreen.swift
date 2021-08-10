@@ -394,7 +394,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
             let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             presentControllerImpl?(controller, nil)
             
-            let _ = (verifySendGramsRequestAndEstimateFees(tonInstance: context.tonInstance, walletInfo: walletInfo, toAddress: destinationAddress, amount: amount, comment: commentData ?? Data(), encryptComment: true, timeout: 0)
+            let _ = (verifySendGramsRequestAndEstimateFees(tonInstance: context.tonInstance, walletInfo: walletInfo, toAddress: destinationAddress, amount: amount, comment: commentData ?? Data(), encryptComment: false, timeout: 0)
             |> deliverOnMainQueue).start(next: { [weak controller] verificationResult in
                 controller?.dismiss()
                 
@@ -416,7 +416,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
                 
                 if verificationResult.canNotEncryptComment {
                     //TODO:localize
-                    attributedText.append(NSAttributedString(string: "\n\nThe destination wallet is not initialized. The comment will be sent unencrypted.", font: Font.regular(13.0), textColor: presentationData.theme.list.itemDestructiveColor))
+                    attributedText.append(NSAttributedString(string: "\n\nNote: Your comment will not be encrypted", font: Font.regular(13.0), textColor: presentationData.theme.list.itemDestructiveColor))
                 }
                 
                 var dismissAlertImpl: ((Bool) -> Void)?
@@ -455,7 +455,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
                     |> deliverOnMainQueue).start(next: { serverSalt in
                         if let serverSalt = serverSalt {
                             if let commentData = state.comment.data(using: .utf8) {
-                                pushImpl?(WalletSplashScreen(context: context, blockchainNetwork: blockchainNetwork, mode: .sending(WalletSplashModeSending(walletInfo: walletInfo, address: state.address, amount: amount, comment: commentData, encryptComment: !verificationResult.canNotEncryptComment, randomId: randomId, serverSalt: serverSalt)), walletCreatedPreloadState: nil))
+                                pushImpl?(WalletSplashScreen(context: context, blockchainNetwork: blockchainNetwork, mode: .sending(WalletSplashModeSending(walletInfo: walletInfo, address: state.address, amount: amount, comment: commentData, encryptComment: false, randomId: randomId, serverSalt: serverSalt)), walletCreatedPreloadState: nil))
                             }
                         }
                     })

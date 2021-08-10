@@ -54,7 +54,7 @@
 "Wallet.Send.Balance" = "Balance: %@";
 "Wallet.Send.AmountText" = "TON coins to send";
 "Wallet.Send.Confirmation" = "Confirmation";
-"Wallet.Send.ConfirmationText" = "Do you want to send **%1$@** TON coins to\n\n%2$@?\n\nBlockchain fees: ~%3$@ TON coins";
+"Wallet.Send.ConfirmationText" = "Do you want to send **%1$@** TON coins to\n\n%2$@?\n\nBlockchain fees: ~%3$@ TON coins\n\nNote: Your comment will not be encrypted";
 "Wallet.Send.ConfirmationConfirm" = "Confirm";
 "Wallet.Send.Send" = "Send";
 "Wallet.Send.OwnAddressAlertTitle" = "Warning";
@@ -166,7 +166,7 @@
 "Wallet.Configuration.ApplyErrorTextURLInvalidData" = "This blockchain configuration is invalid. Please try again.";
 "Wallet.Configuration.ApplyErrorTextJSONInvalidData" = "This blockchain configuration is invalid. Please try again.";
 "Wallet.Configuration.BlockchainNameChangedTitle" = "Warning";
-"Wallet.Configuration.BlockchainNameChangedText" = "Are you sure you want to change the blockchain ID?";
+"Wallet.Configuration.BlockchainNameChangedText" = "Are you sure you want to change the blockchain ID?\n\nIf you proceed, you will need to reconnect your wallet using 24 secret words.";
 "Wallet.Configuration.BlockchainNameChangedProceed" = "Proceed";
 "Wallet.CreateInvoice.Title" = "Create Invoice";
 "Wallet.Navigation.Close" = "Close";
