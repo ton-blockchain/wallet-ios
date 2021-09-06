@@ -166,7 +166,7 @@
 "Wallet.Configuration.ApplyErrorTextURLInvalidData" = "This blockchain configuration is invalid. Please try again.";
 "Wallet.Configuration.ApplyErrorTextJSONInvalidData" = "This blockchain configuration is invalid. Please try again.";
 "Wallet.Configuration.BlockchainNameChangedTitle" = "Warning";
-"Wallet.Configuration.BlockchainNameChangedText" = "Are you sure you want to change the blockchain ID?";
+"Wallet.Configuration.BlockchainNameChangedText" = "Are you sure you want to change the blockchain ID?\n\nIf you proceed, you will need to reconnect your wallet using 24 secret words.";
 "Wallet.Configuration.BlockchainNameChangedProceed" = "Proceed";
 "Wallet.CreateInvoice.Title" = "Create Invoice";
 "Wallet.Navigation.Close" = "Close";
