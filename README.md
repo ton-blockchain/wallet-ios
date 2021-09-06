@@ -1,8 +1,8 @@
-# Test Gram Wallet (iOS)
+# Toncoin Wallet (iOS)
 
-This is the source code and build instructions for a TON Testnet Wallet implementation for iOS.
+This is the source code and build instructions for a Toncoin Wallet implementation for iOS.
 
-1. Install Xcode 11.4
+1. Install Xcode 12.5.1
 ```
 https://apps.apple.com/app/xcode/id497799835
 ```

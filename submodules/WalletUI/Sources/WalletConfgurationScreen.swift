@@ -244,9 +244,10 @@ private struct WalletConfigurationScreenState: Equatable {
             blockchainConfiguration = self.configuration.testNet
         }
         
-//        if self.configuration.testNet.customId == "mainnet" {
-//            return true
-//        }
+        if let id = self.configuration.testNet.customId,
+		   id.isEmpty {
+            return true
+        }
         
         switch blockchainConfiguration.source {
         case .url:
