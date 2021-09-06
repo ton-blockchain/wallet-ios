@@ -133,12 +133,12 @@ public final class WalletInfoScreen: ViewController {
             })
 		}, buyAction: { [weak self] in
 			guard let strongSelf = self else { return }
-			let baseUrl = "ton.org"
-//			let widgetId = ""
+			let baseUrl = "sandbox-exchange.mrcr.io"
+			let widgetId = "4be5ec42-0c54-4695-813c-192a4ff3ad32"
 //			let wallet = strongSelf.walletInfo.address
-//			let ticker = ""
+//			let ticker = "TCOIN"
 			
-			let urlString = "https://\(baseUrl)" //"/?widget_id=\(widgetId)&address=\(wallet)&currency=\(ticker)"
+			let urlString = "https://\(baseUrl)/?widget_id=\(widgetId)" //"&address=\(wallet)&currency=\(ticker)"
 			guard let url = URL(string: urlString) else { return }
 			
 			let webVC = BuyGramsScreen(with: url, context: strongSelf.context)
@@ -180,7 +180,7 @@ private final class BuyGramsScreen: ViewController, WKNavigationDelegate {
 	
 	init(with url: URL, context: WalletContext) {
 		super.init(navigationBarPresentationData: nil)
-		title = "Buy TON Coins"
+		title = "Buy Toncoin"
 		
 		let request = URLRequest(url: url)
 		webView.load(request)
@@ -371,7 +371,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         self.receiveGramsButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_ReceiveGrams, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
         self.sendButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Send, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/SendButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
 		// TODO: localized title
-		self.buyGramsButtonNode = SolidRoundedButtonNode(title: "Buy TON Coins", icon: nil, theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
+		self.buyGramsButtonNode = SolidRoundedButtonNode(title: "Buy Toncoin", icon: nil, theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
         
         self.refreshNode = WalletRefreshNode(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
         
