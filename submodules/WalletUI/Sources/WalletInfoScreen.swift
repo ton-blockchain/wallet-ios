@@ -133,12 +133,12 @@ public final class WalletInfoScreen: ViewController {
             })
 		}, buyAction: { [weak self] in
 			guard let strongSelf = self else { return }
-			let baseUrl = "sandbox-exchange.mrcr.io"
-			let widgetId = "4be5ec42-0c54-4695-813c-192a4ff3ad32"
-//			let wallet = strongSelf.walletInfo.address
-//			let ticker = "TCOIN"
+			let baseUrl = "exchange.mercuryo.io"
+			let widgetId = "67710925-8b40-4767-846e-3b88db69f04d"
+			let wallet = strongSelf.walletInfo.address
+			let ticker = "TONCOIN"
 			
-			let urlString = "https://\(baseUrl)/?widget_id=\(widgetId)" //"&address=\(wallet)&currency=\(ticker)"
+			let urlString = "https://\(baseUrl)/?widget_id=\(widgetId)&address=\(wallet)&currency=\(ticker)"
 			guard let url = URL(string: urlString) else { return }
 			
 			let webVC = BuyGramsScreen(with: url, context: strongSelf.context)
