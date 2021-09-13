@@ -138,7 +138,7 @@ public final class WalletInfoScreen: ViewController {
 			let wallet = strongSelf.walletInfo.address
 			let ticker = "TONCOIN"
 			
-			let urlString = "https://\(baseUrl)/?widget_id=\(widgetId)&address=\(wallet)&currency=\(ticker)"
+			let urlString = "https://\(baseUrl)/?widget_id=\(widgetId)&address=\(wallet)&currency=\(ticker)&fix_currency=true"
 			guard let url = URL(string: urlString) else { return }
 			
 			let webVC = BuyGramsScreen(with: url, context: strongSelf.context)
