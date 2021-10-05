@@ -330,6 +330,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
     let balanceSubtitleIconNode: AnimatedStickerNode
     private let receiveButtonNode: SolidRoundedButtonNode
     private let receiveGramsButtonNode: SolidRoundedButtonNode
+	private let buyGramsLargeButtonNode: SolidRoundedButtonNode
     private let sendButtonNode: SolidRoundedButtonNode
 	private let buyGramsButtonNode: SolidRoundedButtonNode
     private let headerBackgroundNode: ASDisplayNode
@@ -369,9 +370,10 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
 		let buttonNodeTheme = SolidRoundedButtonTheme(backgroundColor: presentationData.theme.info.buttonBackgroundColor, foregroundColor: presentationData.theme.info.buttonTextColor)
         self.receiveButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Receive, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
         self.receiveGramsButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_ReceiveGrams, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
+		self.buyGramsLargeButtonNode = SolidRoundedButtonNode(title: "Buy Toncoin", icon: nil, theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
         self.sendButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Send, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/SendButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
 		// TODO: localized title
-		self.buyGramsButtonNode = SolidRoundedButtonNode(title: "Buy Toncoin", icon: nil, theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
+		self.buyGramsButtonNode = SolidRoundedButtonNode(title: "Buy", icon: nil, theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
         
         self.refreshNode = WalletRefreshNode(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
         
@@ -384,6 +386,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
             self.addSubnode(self.receiveGramsButtonNode)
             self.addSubnode(self.sendButtonNode)
 			self.addSubnode(self.buyGramsButtonNode)
+			self.addSubnode(self.buyGramsLargeButtonNode)
         }
         self.addSubnode(self.balanceNode)
         self.addSubnode(self.balanceSubtitleNode)
@@ -395,6 +398,9 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         self.receiveGramsButtonNode.pressed = {
             receiveAction()
         }
+		self.buyGramsLargeButtonNode.pressed = {
+			buyAction()
+		}
         self.sendButtonNode.pressed = {
             sendAction()
         }
@@ -468,25 +474,42 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         transition.updateFrame(node: self.headerCornerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: effectiveOffset), size: CGSize(width: size.width, height: 10.0)))
         
         let buttonOffset = effectiveOffset
+		
+		let buttonsInRow: CGFloat = 3
+		let widthForButtonInRow: CGFloat = (size.width - sideInset * (buttonsInRow + 1)) / buttonsInRow
         
-        let leftButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: buttonOffset - (sideInset + buttonHeight) * 2), size: CGSize(width: floor((size.width - sideInset * 3.0) / 2.0), height: buttonHeight))
-        let sendButtonFrame = CGRect(origin: CGPoint(x: leftButtonFrame.maxX + sideInset, y: leftButtonFrame.minY), size: CGSize(width: size.width - leftButtonFrame.maxX - sideInset * 2.0, height: buttonHeight))
-        let fullButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: buttonOffset - (sideInset + buttonHeight) * 2), size: CGSize(width: size.width - sideInset * 2.0, height: buttonHeight))
-		let secondRowFullButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: buttonOffset - sideInset - buttonHeight), size: CGSize(width: size.width - sideInset * 2.0, height: buttonHeight))
+		let buyButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: buttonOffset - sideInset - buttonHeight),
+									size: CGSize(width: widthForButtonInRow, height: buttonHeight))
+		let leftButtonFrame = CGRect(origin: CGPoint(x: buyButtonFrame.maxX + sideInset, y: buyButtonFrame.minY),
+									 size: CGSize(width: widthForButtonInRow, height: buttonHeight))
+		let sendButtonFrame = CGRect(origin: CGPoint(x: leftButtonFrame.maxX + sideInset, y: leftButtonFrame.minY),
+									 size: CGSize(width: widthForButtonInRow, height: buttonHeight))
+		
+		let halfWidthButtonSize = CGSize(width: (size.width - sideInset * 3) / 2, height: buttonHeight)
+		let leftHalfButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: buttonOffset - sideInset - buttonHeight),
+										 size: halfWidthButtonSize)
+		let rightHalfButtonFrame = CGRect(origin: CGPoint(x: leftHalfButtonFrame.maxX + sideInset, y: buttonOffset - sideInset - buttonHeight),
+										  size: halfWidthButtonSize)
         
         if let balance = self.balance, balance > 0 {
             self.receiveGramsButtonNode.isHidden = true
+			self.buyGramsLargeButtonNode.isHidden = true
             self.receiveButtonNode.isHidden = false
             self.sendButtonNode.isHidden = false
+			self.buyGramsButtonNode.isHidden = false
         } else {
             if self.balance == nil {
                 self.receiveGramsButtonNode.isHidden = false
+				self.buyGramsLargeButtonNode.isHidden = false
                 self.receiveButtonNode.isHidden = true
                 self.sendButtonNode.isHidden = true
+				self.buyGramsButtonNode.isHidden = true
             } else {
                 self.receiveGramsButtonNode.isHidden = false
+				self.buyGramsLargeButtonNode.isHidden = false
                 self.receiveButtonNode.isHidden = true
                 self.sendButtonNode.isHidden = true
+				self.buyGramsButtonNode.isHidden = true
             }
         }
         if self.balance == nil {
@@ -499,14 +522,17 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
             self.refreshNode.isHidden = false
         }
         
-        transition.updateFrame(node: self.receiveGramsButtonNode, frame: fullButtonFrame)
+		transition.updateFrame(node: self.buyGramsLargeButtonNode, frame: leftHalfButtonFrame)
+		transition.updateAlpha(node: self.buyGramsLargeButtonNode, alpha: buttonAlpha, beginWithCurrentState: true)
+        transition.updateFrame(node: self.receiveGramsButtonNode, frame: rightHalfButtonFrame)
         transition.updateAlpha(node: self.receiveGramsButtonNode, alpha: buttonAlpha, beginWithCurrentState: true)
         transition.updateFrame(node: self.receiveButtonNode, frame: leftButtonFrame)
         transition.updateAlpha(node: self.receiveButtonNode, alpha: buttonAlpha, beginWithCurrentState: true)
-		transition.updateFrame(node: self.buyGramsButtonNode, frame: secondRowFullButtonFrame)
+		transition.updateFrame(node: self.buyGramsButtonNode, frame: buyButtonFrame)
 		transition.updateAlpha(node: self.buyGramsButtonNode, alpha: buttonAlpha, beginWithCurrentState: true)
-        let _ = self.receiveGramsButtonNode.updateLayout(width: fullButtonFrame.width, transition: transition)
-		let _ = self.buyGramsButtonNode.updateLayout(width: secondRowFullButtonFrame.width, transition: transition)
+		let _ = self.buyGramsLargeButtonNode.updateLayout(width: leftHalfButtonFrame.width, transition: transition)
+		let _ = self.receiveGramsButtonNode.updateLayout(width: rightHalfButtonFrame.width, transition: transition)
+		let _ = self.buyGramsButtonNode.updateLayout(width: buyButtonFrame.width, transition: transition)
         let _ = self.receiveButtonNode.updateLayout(width: leftButtonFrame.width, transition: transition)
         transition.updateFrame(node: self.sendButtonNode, frame: sendButtonFrame)
         transition.updateAlpha(node: self.sendButtonNode, alpha: buttonAlpha, beginWithCurrentState: true)
@@ -514,17 +540,23 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let result = self.sendButtonNode.hitTest(self.view.convert(point, to: self.sendButtonNode.view), with: event) {
-            return result
-        }
-        if let result = self.receiveButtonNode.hitTest(self.view.convert(point, to: self.receiveButtonNode.view), with: event) {
-            return result
-        }
-        if let result = self.receiveGramsButtonNode.hitTest(self.view.convert(point, to: self.receiveGramsButtonNode.view), with: event) {
-            return result
-        }
-		if let result = self.buyGramsButtonNode.hitTest(self.view.convert(point, to: self.buyGramsButtonNode.view), with: event) {
-			return result
+		if !buyGramsLargeButtonNode.isHidden && !receiveGramsButtonNode.isHidden {
+			if let result = self.buyGramsLargeButtonNode.hitTest(self.view.convert(point, to: self.buyGramsLargeButtonNode.view), with: event) {
+				return result
+			}
+			if let result = self.receiveGramsButtonNode.hitTest(self.view.convert(point, to: self.receiveGramsButtonNode.view), with: event) {
+				return result
+			}
+		} else {
+			if let result = self.sendButtonNode.hitTest(self.view.convert(point, to: self.sendButtonNode.view), with: event) {
+				return result
+			}
+			if let result = self.receiveButtonNode.hitTest(self.view.convert(point, to: self.receiveButtonNode.view), with: event) {
+				return result
+			}
+			if let result = self.buyGramsButtonNode.hitTest(self.view.convert(point, to: self.buyGramsButtonNode.view), with: event) {
+				return result
+			}
 		}
         return nil
     }
@@ -533,6 +565,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         if animated {
             self.sendButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.receiveGramsButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+			self.buyGramsLargeButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
 			self.buyGramsButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.receiveButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.balanceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
