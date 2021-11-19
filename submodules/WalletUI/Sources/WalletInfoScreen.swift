@@ -8,7 +8,6 @@ import SwiftSignalKit
 import MergeLists
 import AnimatedStickerNode
 import WalletCore
-import WebKit
 import CommonCrypto
 import AVFoundation
 import Photos
@@ -58,6 +57,8 @@ public final class WalletInfoScreen: ViewController {
     override public var ready: Promise<Bool> {
         return self._ready
     }
+	
+	// MARK: - Initialization
     
     public init(context: WalletContext, walletInfo: WalletInfo, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, enableDebugActions: Bool) {
         self.context = context
@@ -89,6 +90,8 @@ public final class WalletInfoScreen: ViewController {
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+	
+	// MARK: - Interactions
     
     @objc private func backPressed() {
         self.dismiss()
@@ -97,6 +100,8 @@ public final class WalletInfoScreen: ViewController {
     @objc private func settingsPressed() {
         self.push(walletSettingsController(context: self.context, walletInfo: self.walletInfo, blockchainNetwork: self.blockchainNetwork))
     }
+	
+	// MARK: - Override
     
     override public func loadDisplayNode() {
         self.displayNode = WalletInfoScreenNode(context: self.context, presentationData: self.presentationData, walletInfo: self.walletInfo, blockchainNetwork: self.blockchainNetwork, sendAction: { [weak self] in
@@ -152,7 +157,7 @@ public final class WalletInfoScreen: ViewController {
 			let urlString = "https://\(baseUrl)/?widget_id=\(widgetId)&address=\(wallet)&currency=\(ticker)&fix_currency=true&signature=\(signature)"
 			guard let url = URL(string: urlString) else { return }
 			
-			let webVC = BuyGramsScreen(with: url, context: strongSelf.context)
+			let webVC = WalletBuyGramsScreen(with: url, context: strongSelf.context)
 			let container = UINavigationController(rootViewController: webVC)
 			
 			strongSelf.present(container, animated: true)
@@ -191,39 +196,6 @@ public final class WalletInfoScreen: ViewController {
 		_ = data.withUnsafeBytes { CC_SHA512($0.baseAddress, CC_LONG(data.count), &digest) }
 		
 		return digest.map({ String(format: "%02hhx", $0) }).joined()
-	}
-}
-
-private final class BuyGramsScreen: ViewController, WKNavigationDelegate {
-	
-	private let webView = WKWebView()
-	
-	init(with url: URL, context: WalletContext) {
-		super.init(navigationBarPresentationData: nil)
-		title = "Buy Toncoin"
-		
-		let request = URLRequest(url: url)
-		webView.load(request)
-		webView.allowsBackForwardNavigationGestures = true
-		webView.navigationDelegate = self
-		navigationItem.leftBarButtonItem = UIBarButtonItem(title: context.presentationData.strings.Wallet_Navigation_Close, style: .plain, target: self, action: #selector(closeTapped))
-	}
-	
-	required init(coder aDecoder: NSCoder) {
-		fatalError("init(coder:) has not been implemented")
-	}
-	
-	override func loadView() {
-		view = webView
-	}
-	
-	@objc
-	private func closeTapped() {
-		if let container = navigationController {
-			container.dismiss(animated: true)
-		} else {
-			dismiss()
-		}
 	}
 }
 
