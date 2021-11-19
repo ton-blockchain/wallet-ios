@@ -10,6 +10,8 @@ import AnimatedStickerNode
 import WalletCore
 import WebKit
 import CommonCrypto
+import AVFoundation
+import Photos
 
 private class WalletInfoTitleView: UIView, NavigationBarTitleView {
     private let buttonView: HighlightTrackingButton
@@ -133,6 +135,12 @@ public final class WalletInfoScreen: ViewController {
                 strongSelf.push(WalletReceiveScreen(context: strongSelf.context, blockchainNetwork: configuration.activeNetwork, mode: .receive(address: strongSelf.walletInfo.address)))
             })
 		}, buyAction: { [weak self] in
+			if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
+				AVCaptureDevice.requestAccess(for: .video) { _ in }
+			}
+			if PHPhotoLibrary.authorizationStatus() == .notDetermined {
+				PHPhotoLibrary.requestAuthorization { _ in }
+			}
 			guard let strongSelf = self else { return }
 			let baseUrl = "exchange.mercuryo.io"
 			let widgetId = "67710925-8b40-4767-846e-3b88db69f04d"
