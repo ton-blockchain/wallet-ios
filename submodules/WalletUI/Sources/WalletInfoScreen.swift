@@ -9,6 +9,7 @@ import MergeLists
 import AnimatedStickerNode
 import WalletCore
 import WebKit
+import CommonCrypto
 
 private class WalletInfoTitleView: UIView, NavigationBarTitleView {
     private let buttonView: HighlightTrackingButton
@@ -137,8 +138,10 @@ public final class WalletInfoScreen: ViewController {
 			let widgetId = "67710925-8b40-4767-846e-3b88db69f04d"
 			let wallet = strongSelf.walletInfo.address
 			let ticker = "TONCOIN"
+			let secret = ""
+			let signature = strongSelf.sha512(baseUrl + secret)
 			
-			let urlString = "https://\(baseUrl)/?widget_id=\(widgetId)&address=\(wallet)&currency=\(ticker)&fix_currency=true"
+			let urlString = "https://\(baseUrl)/?widget_id=\(widgetId)&address=\(wallet)&currency=\(ticker)&fix_currency=true&signature=\(signature)"
 			guard let url = URL(string: urlString) else { return }
 			
 			let webVC = BuyGramsScreen(with: url, context: strongSelf.context)
@@ -172,6 +175,15 @@ public final class WalletInfoScreen: ViewController {
         
         (self.displayNode as! WalletInfoScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
     }
+	
+	private func sha512(_ input: String) -> String {
+		guard let data = input.data(using: .utf8) else { return "" }
+		
+		var digest = [UInt8](repeating: 0, count: Int(CC_SHA512_DIGEST_LENGTH))
+		_ = data.withUnsafeBytes { CC_SHA512($0.baseAddress, CC_LONG(data.count), &digest) }
+		
+		return digest.map({ String(format: "%02hhx", $0) }).joined()
+	}
 }
 
 private final class BuyGramsScreen: ViewController, WKNavigationDelegate {
