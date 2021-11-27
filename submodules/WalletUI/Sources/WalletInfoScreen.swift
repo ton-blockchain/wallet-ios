@@ -159,6 +159,7 @@ public final class WalletInfoScreen: ViewController {
 			
 			let webVC = WalletBuyGramsScreen(with: url, context: strongSelf.context)
 			let container = UINavigationController(rootViewController: webVC)
+			container.modalPresentationStyle = .fullScreen
 			
 			strongSelf.present(container, animated: true)
 		}, openTransaction: { [weak self] transaction in
