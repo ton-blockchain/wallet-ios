@@ -153,7 +153,7 @@ public final class WalletInfoScreen: ViewController {
 					let cancel = TextAlertAction(type: .defaultAction, title: "Cancel", action: {})
 					let alert = standardTextAlertController(theme: strongSelf.presentationData.theme.alert,
 															title: "Alert",
-															text: "Please allow Toncoin Wallet access to your camera and try again",
+															text: "Please allow Toncoin Wallet access to your media and try again",
 															actions: [cancel, action])
 					strongSelf.present(alert, in: .window(.root))
 				}
@@ -187,17 +187,27 @@ public final class WalletInfoScreen: ViewController {
     }
 	
 	private func checkAccessToMediaAndPerformOnMain(_ completion: @escaping (Bool) -> Void) {
-		if PHPhotoLibrary.authorizationStatus() == .notDetermined {
-			PHPhotoLibrary.requestAuthorization { _ in }
-		}
-		if AVCaptureDevice.authorizationStatus(for: .video) == .authorized {
-				completion(true)
-		} else {
-			AVCaptureDevice.requestAccess(for: .video) { granted in
-				DispatchQueue.main.async {
-					completion(granted)
+		if PHPhotoLibrary.authorizationStatus() == .notDetermined &&
+			AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
+			PHPhotoLibrary.requestAuthorization { status in
+				var photoLibraryAccess = status == .authorized
+				if #available(iOS 14.0, *) {
+					photoLibraryAccess = photoLibraryAccess || status == .limited
+				}
+				AVCaptureDevice.requestAccess(for: .video) { cameraAccess in
+					DispatchQueue.main.async {
+						completion(photoLibraryAccess && cameraAccess)
+					}
 				}
 			}
+		} else {
+			let photoLibraryStatus = PHPhotoLibrary.authorizationStatus()
+			var photoLibraryAccess = photoLibraryStatus == .authorized
+			if #available(iOS 14.0, *) {
+				photoLibraryAccess = photoLibraryAccess || photoLibraryStatus == .limited
+			}
+			let cameraAccess = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
+			completion(photoLibraryAccess && cameraAccess)
 		}
 	}
 	
