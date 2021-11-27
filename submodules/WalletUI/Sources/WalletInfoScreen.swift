@@ -140,28 +140,24 @@ public final class WalletInfoScreen: ViewController {
                 strongSelf.push(WalletReceiveScreen(context: strongSelf.context, blockchainNetwork: configuration.activeNetwork, mode: .receive(address: strongSelf.walletInfo.address)))
             })
 		}, buyAction: { [weak self] in
-			if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
-				AVCaptureDevice.requestAccess(for: .video) { _ in }
+			self?.checkAccessToMediaAndPerformOnMain { granted in
+				if granted {
+					self?.presentWalletBuyGramsScreen()
+				} else if let strongSelf = self {
+					let action = TextAlertAction(type: .defaultAction, title: "OK") {
+						guard #available(iOS 10.0, *),
+							  let settingsUrl = URL(string: UIApplication.openSettingsURLString),
+							  UIApplication.shared.canOpenURL(settingsUrl) else { return }
+						UIApplication.shared.open(settingsUrl, completionHandler: nil)
+					}
+					let cancel = TextAlertAction(type: .defaultAction, title: "Cancel", action: {})
+					let alert = standardTextAlertController(theme: strongSelf.presentationData.theme.alert,
+															title: "Alert",
+															text: "Please allow Toncoin Wallet access to your camera and try again",
+															actions: [cancel, action])
+					strongSelf.present(alert, in: .window(.root))
+				}
 			}
-			if PHPhotoLibrary.authorizationStatus() == .notDetermined {
-				PHPhotoLibrary.requestAuthorization { _ in }
-			}
-			guard let strongSelf = self else { return }
-			let baseUrl = "exchange.mercuryo.io"
-			let widgetId = "67710925-8b40-4767-846e-3b88db69f04d"
-			let wallet = strongSelf.walletInfo.address
-			let ticker = "TONCOIN"
-			let secret = ""
-			let signature = strongSelf.sha512(baseUrl + secret)
-			
-			let urlString = "https://\(baseUrl)/?widget_id=\(widgetId)&address=\(wallet)&currency=\(ticker)&fix_currency=true&signature=\(signature)"
-			guard let url = URL(string: urlString) else { return }
-			
-			let webVC = WalletBuyGramsScreen(with: url, context: strongSelf.context)
-			let container = UINavigationController(rootViewController: webVC)
-			container.modalPresentationStyle = .fullScreen
-			
-			strongSelf.present(container, animated: true)
 		}, openTransaction: { [weak self] transaction in
             guard let strongSelf = self else {
                 return
@@ -189,6 +185,39 @@ public final class WalletInfoScreen: ViewController {
         
         (self.displayNode as! WalletInfoScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
     }
+	
+	private func checkAccessToMediaAndPerformOnMain(_ completion: @escaping (Bool) -> Void) {
+		if PHPhotoLibrary.authorizationStatus() == .notDetermined {
+			PHPhotoLibrary.requestAuthorization { _ in }
+		}
+		if AVCaptureDevice.authorizationStatus(for: .video) == .authorized {
+				completion(true)
+		} else {
+			AVCaptureDevice.requestAccess(for: .video) { granted in
+				DispatchQueue.main.async {
+					completion(granted)
+				}
+			}
+		}
+	}
+	
+	private func presentWalletBuyGramsScreen() {
+		let baseUrl = "exchange.mercuryo.io"
+		let widgetId = "67710925-8b40-4767-846e-3b88db69f04d"
+		let wallet = walletInfo.address
+		let ticker = "TONCOIN"
+		let secret = ""
+		let signature = sha512(baseUrl + secret)
+		
+		let urlString = "https://\(baseUrl)/?widget_id=\(widgetId)&address=\(wallet)&currency=\(ticker)&fix_currency=true&signature=\(signature)"
+		guard let url = URL(string: urlString) else { return }
+		
+		let webVC = WalletBuyGramsScreen(with: url, context: context)
+		let container = UINavigationController(rootViewController: webVC)
+		container.modalPresentationStyle = .fullScreen
+		
+		present(container, animated: true)
+	}
 	
 	private func sha512(_ input: String) -> String {
 		guard let data = input.data(using: .utf8) else { return "" }
