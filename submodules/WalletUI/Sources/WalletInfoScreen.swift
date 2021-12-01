@@ -212,15 +212,9 @@ public final class WalletInfoScreen: ViewController {
 	}
 	
 	private func presentWalletBuyGramsScreen() {
-		let baseUrl = "exchange.mercuryo.io"
-		let widgetId = "67710925-8b40-4767-846e-3b88db69f04d"
-		let wallet = walletInfo.address
-		let ticker = "TONCOIN"
-		let secret = ""
-		let signature = sha512(baseUrl + secret)
+		let customURL = WidgetURL(address: walletInfo.address)
+		guard let url = customURL.url else { return }
 		
-		let urlString = "https://\(baseUrl)/?widget_id=\(widgetId)&address=\(wallet)&currency=\(ticker)&fix_currency=true&signature=\(signature)"
-		guard let url = URL(string: urlString) else { return }
 		
 		let webVC = WalletBuyGramsScreen(with: url, context: context)
 		let container = UINavigationController(rootViewController: webVC)
@@ -229,13 +223,31 @@ public final class WalletInfoScreen: ViewController {
 		present(container, animated: true)
 	}
 	
-	private func sha512(_ input: String) -> String {
-		guard let data = input.data(using: .utf8) else { return "" }
+	private struct WidgetURL {
+		let baseUrl = "exchange.mercuryo.io"
+		let widgetId = "67710925-8b40-4767-846e-3b88db69f04d"
+		let address: String
+		let currency = "TONCOIN"
+		let fixCurrency = "true"
+		var signature: String {
+			let secret = ""
+			return sha512(baseUrl + secret)
+		}
+		let merchantTransactionId: String = UUID().uuidString
 		
-		var digest = [UInt8](repeating: 0, count: Int(CC_SHA512_DIGEST_LENGTH))
-		_ = data.withUnsafeBytes { CC_SHA512($0.baseAddress, CC_LONG(data.count), &digest) }
+		var url: URL? {
+			let resultString = "https://\(baseUrl)/?widget_id=\(widgetId)&address=\(address)&currency=\(currency)&fix_currency=\(fixCurrency)&signature=\(signature)&merchant_transaction_id=\(merchantTransactionId)"
+			return URL(string: resultString)
+		}
 		
-		return digest.map({ String(format: "%02hhx", $0) }).joined()
+		private func sha512(_ input: String) -> String {
+			guard let data = input.data(using: .utf8) else { return "" }
+			
+			var digest = [UInt8](repeating: 0, count: Int(CC_SHA512_DIGEST_LENGTH))
+			_ = data.withUnsafeBytes { CC_SHA512($0.baseAddress, CC_LONG(data.count), &digest) }
+			
+			return digest.map({ String(format: "%02hhx", $0) }).joined()
+		}
 	}
 }
 
