@@ -212,8 +212,8 @@ public final class WalletInfoScreen: ViewController {
 	}
 	
 	private func presentWalletBuyGramsScreen() {
-		let customURL = WidgetURL(address: walletInfo.address)
-		guard let url = customURL.url else { return }
+		let widgetURL = WidgetURL(address: walletInfo.address)
+		guard let url = widgetURL.url else { return }
 		
 		
 		let webVC = WalletBuyGramsScreen(with: url, context: context)
@@ -231,7 +231,7 @@ public final class WalletInfoScreen: ViewController {
 		let fixCurrency = "true"
 		var signature: String {
 			let secret = ""
-			return sha512(baseUrl + secret)
+			return sha512(address + secret)
 		}
 		let merchantTransactionId: String = UUID().uuidString
 		
