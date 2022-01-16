@@ -215,12 +215,10 @@ public final class WalletInfoScreen: ViewController {
 		let widgetURL = WidgetURL(address: walletInfo.address)
 		guard let url = widgetURL.url else { return }
 		
+		let webVC = WalletBuyGramsScreen(url: url)
+		webVC.modalPresentationStyle = .fullScreen
 		
-		let webVC = WalletBuyGramsScreen(with: url, context: context)
-		let container = UINavigationController(rootViewController: webVC)
-		container.modalPresentationStyle = .fullScreen
-		
-		present(container, animated: true)
+		present(webVC, animated: true)
 	}
 	
 	private struct WidgetURL {
