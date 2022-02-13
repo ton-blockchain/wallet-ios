@@ -412,7 +412,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
 		let buttonNodeTheme = SolidRoundedButtonTheme(backgroundColor: presentationData.theme.info.buttonBackgroundColor, foregroundColor: presentationData.theme.info.buttonTextColor)
         self.receiveButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Receive, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
         self.receiveGramsButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_ReceiveGrams, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
-		self.buyGramsLargeButtonNode = SolidRoundedButtonNode(title: "Buy Toncoin", icon: nil, theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
+		self.buyGramsLargeButtonNode = SolidRoundedButtonNode(title: "Buy TON", icon: nil, theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
         self.sendButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Send, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/SendButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
 		// TODO: localized title
 		self.buyGramsButtonNode = SolidRoundedButtonNode(title: "Buy", icon: nil, theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
