@@ -225,7 +225,7 @@ public final class WalletInfoScreen: ViewController {
 		let baseUrl = "exchange.mercuryo.io"
 		let widgetId = "67710925-8b40-4767-846e-3b88db69f04d"
 		let address: String
-		let currency = "TONCOIN"
+		let currency = "TON"
 		let fixCurrency = "true"
 		var signature: String {
 			let secret = ""
