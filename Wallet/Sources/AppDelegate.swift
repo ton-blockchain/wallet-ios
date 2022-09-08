@@ -5,6 +5,7 @@ import SwiftSignalKit
 import BuildConfig
 import WalletUI
 import WalletCore
+import WalletUrl
 import AVFoundation
 
 private func encodeText(_ string: String, _ key: Int) -> String {
@@ -809,9 +810,17 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                         if recordPublicKey == publicKey {
                             switch record.info {
                             case let .ready(info, exportCompleted, _):
-                                if exportCompleted {
-                                    let infoScreen = WalletInfoScreen(context: walletContext, walletInfo: info, blockchainNetwork: initialResolvedConfig.activeNetwork, enableDebugActions: false)
-                                    beginWithController(infoScreen)
+								if exportCompleted {
+									let infoScreen = WalletInfoScreen(context: walletContext, walletInfo: info, blockchainNetwork: initialResolvedConfig.activeNetwork, enableDebugActions: false)
+									beginWithController(infoScreen)
+									if let url = launchOptions?[UIApplication.LaunchOptionsKey.url] as? URL {
+										let walletUrl = parseWalletUrl(url)
+										var randomId: Int64 = 0
+										arc4random_buf(&randomId, 8)
+										let sendScreen = walletSendScreen(context: walletContext, randomId: randomId, walletInfo: info, blockchainNetwork: initialResolvedConfig.activeNetwork, address: walletUrl?.address, amount: walletUrl?.amount, comment: walletUrl?.comment)
+										navigationController.pushViewController(sendScreen)
+//										infoScreen.present(sendScreen, in: .current)
+									}
                                 } else {
                                     let createdScreen = WalletSplashScreen(context: walletContext, blockchainNetwork: initialResolvedConfig.activeNetwork, mode: .created(walletInfo: info, words: nil), walletCreatedPreloadState: nil)
                                     beginWithController(createdScreen)
@@ -842,6 +851,45 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         
         return true
     }
+	
+	func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+
+		if let context = walletContext {
+			let _ = (combineLatest(queue: .mainQueue(),
+								   context.storage.getWalletRecords(),
+								   context.keychain.encryptionPublicKey()
+			)
+			|> deliverOnMainQueue).start(next: { [weak self] records, publicKey in
+				guard let record = records.first,
+					  let publicKey = publicKey else {
+					return
+				}
+				let recordPublicKey: Data
+				switch record.info {
+				case let .ready(info, _, _):
+					recordPublicKey = info.encryptedSecret.publicKey
+				case let .imported(info):
+					recordPublicKey = info.encryptedSecret.publicKey
+				}
+				if recordPublicKey == publicKey {
+					switch record.info {
+					case let .ready(info, exportCompleted, _):
+						if exportCompleted,
+						   let navVC = self?.mainWindow?.viewController as? NavigationController {
+							let walletUrl = parseWalletUrl(url)
+							var randomId: Int64 = 0
+							arc4random_buf(&randomId, 8)
+							let sendScreen = walletSendScreen(context: context, randomId: randomId, walletInfo: info, blockchainNetwork: MergedLocalWalletConfiguration.default.activeNetwork, address: walletUrl?.address, amount: walletUrl?.amount, comment: walletUrl?.comment)
+							navVC.pushViewController(sendScreen)
+						}
+					default:
+						break
+					}
+				}
+			})
+		}
+		return true
+	}
 }
 
 private enum DownloadFileError {
@@ -949,8 +997,8 @@ private extension MergedLocalWalletConfiguration {
                 resolved: nil),*/
             testNet: MergedLocalBlockchainConfiguration(
                 configuration: LocalBlockchainConfiguration(
-                    source: .url("https://ton.org/config-test.json"),
-                    customId: nil
+                    source: .url("https://ton.org/global-config-wallet.json"),
+                    customId: "mainnet"
                 ),
                 resolved: nil
             ),

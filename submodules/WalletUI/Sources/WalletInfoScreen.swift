@@ -8,6 +8,9 @@ import SwiftSignalKit
 import MergeLists
 import AnimatedStickerNode
 import WalletCore
+import CommonCrypto
+import AVFoundation
+import Photos
 
 private class WalletInfoTitleView: UIView, NavigationBarTitleView {
     private let buttonView: HighlightTrackingButton
@@ -54,6 +57,8 @@ public final class WalletInfoScreen: ViewController {
     override public var ready: Promise<Bool> {
         return self._ready
     }
+	
+	// MARK: - Initialization
     
     public init(context: WalletContext, walletInfo: WalletInfo, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, enableDebugActions: Bool) {
         self.context = context
@@ -85,6 +90,8 @@ public final class WalletInfoScreen: ViewController {
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+	
+	// MARK: - Interactions
     
     @objc private func backPressed() {
         self.dismiss()
@@ -93,6 +100,8 @@ public final class WalletInfoScreen: ViewController {
     @objc private func settingsPressed() {
         self.push(walletSettingsController(context: self.context, walletInfo: self.walletInfo, blockchainNetwork: self.blockchainNetwork))
     }
+	
+	// MARK: - Override
     
     override public func loadDisplayNode() {
         self.displayNode = WalletInfoScreenNode(context: self.context, presentationData: self.presentationData, walletInfo: self.walletInfo, blockchainNetwork: self.blockchainNetwork, sendAction: { [weak self] in
@@ -130,7 +139,26 @@ public final class WalletInfoScreen: ViewController {
                 }
                 strongSelf.push(WalletReceiveScreen(context: strongSelf.context, blockchainNetwork: configuration.activeNetwork, mode: .receive(address: strongSelf.walletInfo.address)))
             })
-        }, openTransaction: { [weak self] transaction in
+		}, buyAction: { [weak self] in
+			self?.checkAccessToMediaAndPerformOnMain { granted in
+				if granted {
+					self?.presentWalletBuyGramsScreen()
+				} else if let strongSelf = self {
+					let action = TextAlertAction(type: .defaultAction, title: "OK") {
+						guard #available(iOS 10.0, *),
+							  let settingsUrl = URL(string: UIApplication.openSettingsURLString),
+							  UIApplication.shared.canOpenURL(settingsUrl) else { return }
+						UIApplication.shared.open(settingsUrl, completionHandler: nil)
+					}
+					let cancel = TextAlertAction(type: .defaultAction, title: "Cancel", action: {})
+					let alert = standardTextAlertController(theme: strongSelf.presentationData.theme.alert,
+															title: "Alert",
+															text: "Please allow Toncoin Wallet access to your media and try again",
+															actions: [cancel, action])
+					strongSelf.present(alert, in: .window(.root))
+				}
+			}
+		}, openTransaction: { [weak self] transaction in
             guard let strongSelf = self else {
                 return
             }
@@ -157,6 +185,68 @@ public final class WalletInfoScreen: ViewController {
         
         (self.displayNode as! WalletInfoScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
     }
+	
+	private func checkAccessToMediaAndPerformOnMain(_ completion: @escaping (Bool) -> Void) {
+		if PHPhotoLibrary.authorizationStatus() == .notDetermined &&
+			AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
+			PHPhotoLibrary.requestAuthorization { status in
+				var photoLibraryAccess = status == .authorized
+				if #available(iOS 14.0, *) {
+					photoLibraryAccess = photoLibraryAccess || status == .limited
+				}
+				AVCaptureDevice.requestAccess(for: .video) { cameraAccess in
+					DispatchQueue.main.async {
+						completion(photoLibraryAccess && cameraAccess)
+					}
+				}
+			}
+		} else {
+			let photoLibraryStatus = PHPhotoLibrary.authorizationStatus()
+			var photoLibraryAccess = photoLibraryStatus == .authorized
+			if #available(iOS 14.0, *) {
+				photoLibraryAccess = photoLibraryAccess || photoLibraryStatus == .limited
+			}
+			let cameraAccess = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
+			completion(photoLibraryAccess && cameraAccess)
+		}
+	}
+	
+	private func presentWalletBuyGramsScreen() {
+		let widgetURL = WidgetURL(address: walletInfo.address)
+		guard let url = widgetURL.url else { return }
+		
+		let webVC = WalletBuyGramsScreen(url: url)
+		webVC.modalPresentationStyle = .fullScreen
+		
+		present(webVC, animated: true)
+	}
+	
+	private struct WidgetURL {
+		let baseUrl = "exchange.mercuryo.io"
+		let widgetId = "67710925-8b40-4767-846e-3b88db69f04d"
+		let address: String
+		let currency = "TON"
+		let fixCurrency = "true"
+		var signature: String {
+			let secret = ""
+			return sha512(address + secret)
+		}
+		let merchantTransactionId: String = UUID().uuidString
+		
+		var url: URL? {
+			let resultString = "https://\(baseUrl)/?widget_id=\(widgetId)&address=\(address)&currency=\(currency)&fix_currency=\(fixCurrency)&signature=\(signature)&merchant_transaction_id=\(merchantTransactionId)"
+			return URL(string: resultString)
+		}
+		
+		private func sha512(_ input: String) -> String {
+			guard let data = input.data(using: .utf8) else { return "" }
+			
+			var digest = [UInt8](repeating: 0, count: Int(CC_SHA512_DIGEST_LENGTH))
+			_ = data.withUnsafeBytes { CC_SHA512($0.baseAddress, CC_LONG(data.count), &digest) }
+			
+			return digest.map({ String(format: "%02hhx", $0) }).joined()
+		}
+	}
 }
 
 final class WalletInfoBalanceNode: ASDisplayNode {
@@ -282,11 +372,13 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
     let balanceSubtitleIconNode: AnimatedStickerNode
     private let receiveButtonNode: SolidRoundedButtonNode
     private let receiveGramsButtonNode: SolidRoundedButtonNode
+	private let buyGramsLargeButtonNode: SolidRoundedButtonNode
     private let sendButtonNode: SolidRoundedButtonNode
+	private let buyGramsButtonNode: SolidRoundedButtonNode
     private let headerBackgroundNode: ASDisplayNode
     private let headerCornerNode: ASImageNode
     
-    init(presentationData: WalletPresentationData, hasActions: Bool, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void) {
+	init(presentationData: WalletPresentationData, hasActions: Bool, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, buyAction: @escaping () -> Void) {
         self.hasActions = hasActions
         
         self.balanceNode = WalletInfoBalanceNode(dateTimeFormat: presentationData.dateTimeFormat)
@@ -317,9 +409,13 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
             context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 20.0, height: 20.0)))
         })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 1)
         
-        self.receiveButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Receive, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: SolidRoundedButtonTheme(backgroundColor: presentationData.theme.info.buttonBackgroundColor, foregroundColor: presentationData.theme.info.buttonTextColor), height: 50.0, cornerRadius: 10.0, gloss: false)
-        self.receiveGramsButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_ReceiveGrams, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: SolidRoundedButtonTheme(backgroundColor: presentationData.theme.info.buttonBackgroundColor, foregroundColor: presentationData.theme.info.buttonTextColor), height: 50.0, cornerRadius: 10.0, gloss: false)
-        self.sendButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Send, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/SendButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: SolidRoundedButtonTheme(backgroundColor: presentationData.theme.info.buttonBackgroundColor, foregroundColor: presentationData.theme.info.buttonTextColor), height: 50.0, cornerRadius: 10.0, gloss: false)
+		let buttonNodeTheme = SolidRoundedButtonTheme(backgroundColor: presentationData.theme.info.buttonBackgroundColor, foregroundColor: presentationData.theme.info.buttonTextColor)
+        self.receiveButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Receive, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.receiveGramsButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_ReceiveGrams, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
+		self.buyGramsLargeButtonNode = SolidRoundedButtonNode(title: "Buy TON", icon: nil, theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.sendButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Send, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/SendButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
+		// TODO: localized title
+		self.buyGramsButtonNode = SolidRoundedButtonNode(title: "Buy", icon: nil, theme: buttonNodeTheme, height: 50.0, cornerRadius: 10.0, gloss: false)
         
         self.refreshNode = WalletRefreshNode(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
         
@@ -331,6 +427,8 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
             self.addSubnode(self.receiveButtonNode)
             self.addSubnode(self.receiveGramsButtonNode)
             self.addSubnode(self.sendButtonNode)
+			self.addSubnode(self.buyGramsButtonNode)
+			self.addSubnode(self.buyGramsLargeButtonNode)
         }
         self.addSubnode(self.balanceNode)
         self.addSubnode(self.balanceSubtitleNode)
@@ -342,9 +440,15 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         self.receiveGramsButtonNode.pressed = {
             receiveAction()
         }
+		self.buyGramsLargeButtonNode.pressed = {
+			buyAction()
+		}
         self.sendButtonNode.pressed = {
             sendAction()
         }
+		self.buyGramsButtonNode.pressed = {
+			buyAction()
+		}
     }
     
     func update(size: CGSize, navigationHeight: CGFloat, offset: CGFloat, transition: ContainedViewLayoutTransition, isScrolling: Bool) {
@@ -383,7 +487,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         let minHeaderY = navigationHeight - 44.0 + floor((44.0 - minHeaderHeight) / 2.0)
         let maxHeaderY = floor((size.height - balanceSize.height) / 2.0 - balanceSubtitleSize.height)
         let headerPositionTransition: CGFloat = max(0.0, (effectiveOffset - minHeaderOffset) / (maxOffset - minHeaderOffset))
-        let headerY = headerPositionTransition * maxHeaderY + (1.0 - headerPositionTransition) * minHeaderY
+		let headerY = headerPositionTransition * maxHeaderY * 0.85 + (1.0 - headerPositionTransition) * minHeaderY
         let headerScale = headerScaleTransition * maxHeaderScale + (1.0 - headerScaleTransition) * minHeaderScale
         
         let refreshSize = CGSize(width: 0.0, height: 0.0)
@@ -412,24 +516,42 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         transition.updateFrame(node: self.headerCornerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: effectiveOffset), size: CGSize(width: size.width, height: 10.0)))
         
         let buttonOffset = effectiveOffset
+		
+		let buttonsInRow: CGFloat = 3
+		let widthForButtonInRow: CGFloat = (size.width - sideInset * (buttonsInRow + 1)) / buttonsInRow
         
-        let leftButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: buttonOffset - sideInset - buttonHeight), size: CGSize(width: floor((size.width - sideInset * 3.0) / 2.0), height: buttonHeight))
-        let sendButtonFrame = CGRect(origin: CGPoint(x: leftButtonFrame.maxX + sideInset, y: leftButtonFrame.minY), size: CGSize(width: size.width - leftButtonFrame.maxX - sideInset * 2.0, height: buttonHeight))
-        let fullButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: buttonOffset - sideInset - buttonHeight), size: CGSize(width: size.width - sideInset * 2.0, height: buttonHeight))
+		let buyButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: buttonOffset - sideInset - buttonHeight),
+									size: CGSize(width: widthForButtonInRow, height: buttonHeight))
+		let leftButtonFrame = CGRect(origin: CGPoint(x: buyButtonFrame.maxX + sideInset, y: buyButtonFrame.minY),
+									 size: CGSize(width: widthForButtonInRow, height: buttonHeight))
+		let sendButtonFrame = CGRect(origin: CGPoint(x: leftButtonFrame.maxX + sideInset, y: leftButtonFrame.minY),
+									 size: CGSize(width: widthForButtonInRow, height: buttonHeight))
+		
+		let halfWidthButtonSize = CGSize(width: (size.width - sideInset * 3) / 2, height: buttonHeight)
+		let leftHalfButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: buttonOffset - sideInset - buttonHeight),
+										 size: halfWidthButtonSize)
+		let rightHalfButtonFrame = CGRect(origin: CGPoint(x: leftHalfButtonFrame.maxX + sideInset, y: buttonOffset - sideInset - buttonHeight),
+										  size: halfWidthButtonSize)
         
         if let balance = self.balance, balance > 0 {
             self.receiveGramsButtonNode.isHidden = true
+			self.buyGramsLargeButtonNode.isHidden = true
             self.receiveButtonNode.isHidden = false
             self.sendButtonNode.isHidden = false
+			self.buyGramsButtonNode.isHidden = false
         } else {
             if self.balance == nil {
                 self.receiveGramsButtonNode.isHidden = false
+				self.buyGramsLargeButtonNode.isHidden = false
                 self.receiveButtonNode.isHidden = true
                 self.sendButtonNode.isHidden = true
+				self.buyGramsButtonNode.isHidden = true
             } else {
                 self.receiveGramsButtonNode.isHidden = false
+				self.buyGramsLargeButtonNode.isHidden = false
                 self.receiveButtonNode.isHidden = true
                 self.sendButtonNode.isHidden = true
+				self.buyGramsButtonNode.isHidden = true
             }
         }
         if self.balance == nil {
@@ -442,11 +564,17 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
             self.refreshNode.isHidden = false
         }
         
-        transition.updateFrame(node: self.receiveGramsButtonNode, frame: fullButtonFrame)
+		transition.updateFrame(node: self.buyGramsLargeButtonNode, frame: leftHalfButtonFrame)
+		transition.updateAlpha(node: self.buyGramsLargeButtonNode, alpha: buttonAlpha, beginWithCurrentState: true)
+        transition.updateFrame(node: self.receiveGramsButtonNode, frame: rightHalfButtonFrame)
         transition.updateAlpha(node: self.receiveGramsButtonNode, alpha: buttonAlpha, beginWithCurrentState: true)
         transition.updateFrame(node: self.receiveButtonNode, frame: leftButtonFrame)
         transition.updateAlpha(node: self.receiveButtonNode, alpha: buttonAlpha, beginWithCurrentState: true)
-        let _ = self.receiveGramsButtonNode.updateLayout(width: fullButtonFrame.width, transition: transition)
+		transition.updateFrame(node: self.buyGramsButtonNode, frame: buyButtonFrame)
+		transition.updateAlpha(node: self.buyGramsButtonNode, alpha: buttonAlpha, beginWithCurrentState: true)
+		let _ = self.buyGramsLargeButtonNode.updateLayout(width: leftHalfButtonFrame.width, transition: transition)
+		let _ = self.receiveGramsButtonNode.updateLayout(width: rightHalfButtonFrame.width, transition: transition)
+		let _ = self.buyGramsButtonNode.updateLayout(width: buyButtonFrame.width, transition: transition)
         let _ = self.receiveButtonNode.updateLayout(width: leftButtonFrame.width, transition: transition)
         transition.updateFrame(node: self.sendButtonNode, frame: sendButtonFrame)
         transition.updateAlpha(node: self.sendButtonNode, alpha: buttonAlpha, beginWithCurrentState: true)
@@ -454,15 +582,24 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let result = self.sendButtonNode.hitTest(self.view.convert(point, to: self.sendButtonNode.view), with: event) {
-            return result
-        }
-        if let result = self.receiveButtonNode.hitTest(self.view.convert(point, to: self.receiveButtonNode.view), with: event) {
-            return result
-        }
-        if let result = self.receiveGramsButtonNode.hitTest(self.view.convert(point, to: self.receiveGramsButtonNode.view), with: event) {
-            return result
-        }
+		if !buyGramsLargeButtonNode.isHidden && !receiveGramsButtonNode.isHidden {
+			if let result = self.buyGramsLargeButtonNode.hitTest(self.view.convert(point, to: self.buyGramsLargeButtonNode.view), with: event) {
+				return result
+			}
+			if let result = self.receiveGramsButtonNode.hitTest(self.view.convert(point, to: self.receiveGramsButtonNode.view), with: event) {
+				return result
+			}
+		} else {
+			if let result = self.sendButtonNode.hitTest(self.view.convert(point, to: self.sendButtonNode.view), with: event) {
+				return result
+			}
+			if let result = self.receiveButtonNode.hitTest(self.view.convert(point, to: self.receiveButtonNode.view), with: event) {
+				return result
+			}
+			if let result = self.buyGramsButtonNode.hitTest(self.view.convert(point, to: self.buyGramsButtonNode.view), with: event) {
+				return result
+			}
+		}
         return nil
     }
     
@@ -470,6 +607,8 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         if animated {
             self.sendButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.receiveGramsButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+			self.buyGramsLargeButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+			self.buyGramsButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.receiveButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.balanceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.balanceSubtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -601,7 +740,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     private var watchCombinedStateDisposable: Disposable?
     private var refreshProgressDisposable: Disposable?
     
-    init(context: WalletContext, presentationData: WalletPresentationData, walletInfo: WalletInfo, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, openTransaction: @escaping (WalletInfoTransaction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+	init(context: WalletContext, presentationData: WalletPresentationData, walletInfo: WalletInfo, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, buyAction: @escaping () -> Void, openTransaction: @escaping (WalletInfoTransaction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.walletInfo = walletInfo
@@ -609,7 +748,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         self.openTransaction = openTransaction
         self.present = present
         
-        self.headerNode = WalletInfoHeaderNode(presentationData: presentationData, hasActions: true, sendAction: sendAction, receiveAction: receiveAction)
+        self.headerNode = WalletInfoHeaderNode(presentationData: presentationData, hasActions: true, sendAction: sendAction, receiveAction: receiveAction, buyAction: buyAction)
         
         self.listNode = ListView()
         self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
@@ -1033,7 +1172,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                     /*case .mainNet:
                         balanceLabel = self.presentationData.strings.Wallet_Info_YourBalance*/
                     case .testNet:
-                        balanceLabel = "Your test balance"
+                        balanceLabel = "Your balance"
                     }
                     self.headerNode.balanceSubtitleNode.attributedText = NSAttributedString(string: balanceLabel, font: Font.regular(13), textColor: UIColor(white: 1.0, alpha: 0.6))
                     self.headerNode.balanceSubtitleIconNode.isHidden = true
@@ -1053,7 +1192,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 /*case .mainNet:
                     balanceLabel = self.presentationData.strings.Wallet_Info_YourBalance*/
                 case .testNet:
-                    balanceLabel = "Your test balance"
+                    balanceLabel = "Your balance"
                 }
                 self.headerNode.balanceSubtitleNode.attributedText = NSAttributedString(string: balanceLabel, font: Font.regular(13), textColor: UIColor(white: 1.0, alpha: 0.6))
                 self.headerNode.balanceSubtitleIconNode.isHidden = true

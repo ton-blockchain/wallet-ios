@@ -565,13 +565,13 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
         var feesString: String = ""
         if case let .completed(transaction) = walletTransaction {
             if transaction.otherFee != 0 {
-                feesString.append(formatBalanceText(transaction.otherFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " transaction fee")
+                feesString.append(formatBalanceText(transaction.otherFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " \(presentationData.strings.Wallet_TransactionInfo_OtherFeeHeader.lowercased())")
             }
             if transaction.storageFee != 0 {
                 if !feesString.isEmpty {
                     feesString.append("\n")
                 }
-                feesString.append(formatBalanceText(transaction.storageFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " storage fee")
+                feesString.append(formatBalanceText(transaction.storageFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " \(presentationData.strings.Wallet_TransactionInfo_StorageFeeHeader.lowercased())")
             }
             
             self.feesInfoIconNode.isHidden = feesString.isEmpty
