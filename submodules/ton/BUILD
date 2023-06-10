@@ -9,21 +9,32 @@ ton_headers = [
     "tonlib/tonlib_client_json.h",
     "tonlib/tonlibjson_export.h",
     "tonlib/Client.h",
+    "crypto/common/bitstring.h",
+    "common/refcnt.hpp",
+    "td/utils/bits.h",
+    "td/utils/Destructor.h",
+    "td/utils/MovableValue.h",
     "td/utils/Slice-decl.h",
     "td/utils/config.h",
     "td/utils/SharedSlice.h",
     "td/utils/Slice.h",
     "td/utils/int_types.h",
+    "td/utils/StackAllocator.h",
+    "td/utils/StringBuilder.h",
     "td/utils/common.h",
     "td/utils/check.h",
+    "td/utils/logging.h",
     "td/utils/unique_ptr.h",
     "td/utils/port/platform.h",
+    "td/utils/port/config.h",
+    "td/utils/port/thread_local.h",
 ]
 
 ton_lib_names = [
     "adnllite",
     "crc32c",
     "keys",
+    "emulator_static",
     "lite-client-common",
     "smc-envelope",
     "tdactor",
@@ -53,6 +64,7 @@ genrule(
         "build-ton-bazel.sh",
         "Apple-bazel.cmake",
         "iOS-bazel.cmake",
+        "headers.patch",
         ":TonSources",
         "//submodules/openssl:openssl_include",
         "//submodules/openssl:libcrypto.a",
@@ -88,7 +100,9 @@ genrule(
     LOCAL_OPENSSL="{local_openssl_path}"
     SOURCE_PATH="submodules/ton/tonlib-src"
 
+    git -C $$SOURCE_PATH apply "$$PWD/$(location :headers.patch)"
     cp -R "$$SOURCE_PATH" "$$BUILD_DIR/"
+    git -C $$SOURCE_PATH reset --hard
 
     mkdir -p "$$BUILD_DIR/openssl_headers/include/openssl"
     mkdir -p "$$BUILD_DIR/openssl_headers/lib"

@@ -850,7 +850,8 @@ typedef enum {
             make_object<tonlib_api::accountAddress>(address.UTF8String),
             makeString([NSData data]),
             amount,
-            tonlib_api::move_object_as<tonlib_api::msg_Data>(inputMessageData)
+            tonlib_api::move_object_as<tonlib_api::msg_Data>(inputMessageData),
+            -1
         ));
         auto inputAction = make_object<tonlib_api::actionMsg>(
             std::move(inputMessages),
@@ -912,7 +913,8 @@ typedef enum {
             make_object<tonlib_api::accountAddress>(address.UTF8String),
             makeString([NSData data]),
             amount,
-            tonlib_api::move_object_as<tonlib_api::msg_Data>(inputMessageData)
+            tonlib_api::move_object_as<tonlib_api::msg_Data>(inputMessageData),
+            -1
         ));
         auto inputAction = make_object<tonlib_api::actionMsg>(
             std::move(inputMessages),

@@ -22,7 +22,13 @@ brew install build-system/bazel.rb
 brew install openssl@1.1
 ```
 
-3. Generate Xcode project
+3. Install pkg-config
+
+```
+brew install pkg-config
+```
+
+4. Generate Xcode project
 
 Note:
 It is recommended to use an artifact cache to optimize build speed. Prepend any of the following commands with

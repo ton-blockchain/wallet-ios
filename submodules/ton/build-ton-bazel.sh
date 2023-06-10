@@ -57,8 +57,12 @@ else
   exit 1
 fi
 
-# Prepare build and generate [auto] code
+# Expose homebrew bundles to ENV
+if [[ $(uname -m) == 'arm64' ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)" || true
+fi
 
+# Prepare build and generate [auto] code
 rm -rf $build
 mkdir -p $build
 cd $build
@@ -71,7 +75,6 @@ cmake --build . --target prepare_cross_compiling
 cd ..
 
 # Build for specific target
-
 rm -rf $build
 mkdir -p $build
 mkdir -p $install
