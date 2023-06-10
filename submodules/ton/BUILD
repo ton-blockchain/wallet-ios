@@ -1,3 +1,8 @@
+load(
+    "//build-input/data:variables.bzl",
+    "local_openssl_path",
+)
+
 ton_headers = [
     "auto/tl/tonlib_api.h",
     "tl/TlObject.h",
@@ -46,6 +51,7 @@ genrule(
     name = "ton_build",
     srcs = [
         "build-ton-bazel.sh",
+        "Apple-bazel.cmake",
         "iOS-bazel.cmake",
         ":TonSources",
         "//submodules/openssl:openssl_include",
@@ -77,7 +83,9 @@ genrule(
 
     cp $(location :build-ton-bazel.sh) "$$BUILD_DIR/"
     cp $(location :iOS-bazel.cmake) "$$BUILD_DIR/"
+    cp $(location :Apple-bazel.cmake) "$$BUILD_DIR/"
 
+    LOCAL_OPENSSL="{local_openssl_path}"
     SOURCE_PATH="submodules/ton/tonlib-src"
 
     cp -R "$$SOURCE_PATH" "$$BUILD_DIR/"
@@ -90,8 +98,8 @@ genrule(
     done
     mkdir -p "$$BUILD_DIR/Public/ton"
 
-    PATH="$$PATH:$$CMAKE_DIR/bin" sh $$BUILD_DIR/build-ton-bazel.sh "$$BUILD_DIR" "$$BUILD_DIR" "$$BUILD_DIR/openssl_headers" $$BUILD_ARCH
-    """ +
+    PATH="$$PATH:$$CMAKE_DIR/bin" sh $$BUILD_DIR/build-ton-bazel.sh "$$BUILD_DIR" "$$BUILD_DIR" "$$BUILD_DIR/openssl_headers" $$LOCAL_OPENSSL $$BUILD_ARCH
+    """.format(local_openssl_path = local_openssl_path) +
     "\n".join([
         "cp -f \"$$BUILD_DIR/build/out/include/{}\" \"$(location Public/ton/include/{})\"".format(header, header) for header in ton_headers
     ]) +
@@ -99,8 +107,7 @@ genrule(
     "\n".join([
         "cp -f \"$$BUILD_DIR/build/out/lib/lib{}.a\" \"$(location Public/ton/lib/lib{}.a)\"".format(lib, lib) for lib in ton_lib_names
     ]),
-    outs = ["Public/ton/include/" + x for x in ton_headers] +
-    ["Public/ton/lib/lib{}.a".format(x) for x in ton_lib_names],
+    outs = ["Public/ton/include/" + x for x in ton_headers] + ["Public/ton/lib/lib{}.a".format(x) for x in ton_lib_names],
     tools = [
         "//third-party/cmake:cmake.tar",
     ],
