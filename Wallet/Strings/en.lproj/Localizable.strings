@@ -54,7 +54,7 @@
 "Wallet.Send.Balance" = "Balance: %@";
 "Wallet.Send.AmountText" = "TON to send";
 "Wallet.Send.Confirmation" = "Confirmation";
-"Wallet.Send.ConfirmationText" = "Do you want to send **%1$@** TON to\n\n%2$@?\n\nBlockchain fees: ~%3$@ TON\n\nNote: Your comment will not be encrypted";
+"Wallet.Send.ConfirmationText" = "Do you want to send **%1$@** TON to\n\n%2$@?\n\nBlockchain fees: ~%3$@ TON";
 "Wallet.Send.ConfirmationConfirm" = "Confirm";
 "Wallet.Send.Send" = "Send";
 "Wallet.Send.OwnAddressAlertTitle" = "Warning";
@@ -62,7 +62,7 @@
 "Wallet.Send.OwnAddressAlertProceed" = "Proceed";
 "Wallet.Send.TransactionInProgress" = "Please wait until the current transaction is completed.";
 "Wallet.Send.SyncInProgress" = "Please wait while the wallet finishes syncing with the TON Blockchain.";
-"Wallet.Send.EncryptComment" = "Encrypt Text";
+"Wallet.Send.EncryptComment" = "Encrypt Comment";
 "Wallet.Settings.Title" = "Settings";
 "Wallet.Settings.Configuration" = "Server Settings";
 "Wallet.Settings.ConfigurationInfo" = "Advanced Settings";

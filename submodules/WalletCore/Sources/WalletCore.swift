@@ -522,6 +522,8 @@ public final class TonInstance {
                                 subscriber.putError(.messageTooLong)
                             } else if error.text.hasPrefix("NOT_ENOUGH_FUNDS") {
                                 subscriber.putError(.notEnoughFunds)
+                            } else if error.text.hasPrefix("MESSAGE_ENCRYPTION") {
+                                subscriber.putError(.canNotSendEncryptedMessage)
                             } else if isTextNetworkError(error.text) {
                                 subscriber.putError(.network)
                             } else {
@@ -566,6 +568,8 @@ public final class TonInstance {
                                 subscriber.putError(.messageTooLong)
                             } else if error.text.hasPrefix("NOT_ENOUGH_FUNDS") {
                                 subscriber.putError(.notEnoughFunds)
+                            } else if error.text.hasPrefix("MESSAGE_ENCRYPTION") {
+                                subscriber.putError(.canNotSendEncryptedMessage)
                             } else if isTextNetworkError(error.text) {
                                 subscriber.putError(.network)
                             } else {
@@ -610,6 +614,8 @@ public final class TonInstance {
                                 subscriber.putError(.messageTooLong)
                             } else if error.text.hasPrefix("NOT_ENOUGH_FUNDS") {
                                 subscriber.putError(.notEnoughFunds)
+                            } else if error.text.hasPrefix("MESSAGE_ENCRYPTION") {
+                                subscriber.putError(.canNotSendEncryptedMessage)
                             } else if isTextNetworkError(error.text) {
                                 subscriber.putError(.network)
                             } else {
@@ -647,6 +653,8 @@ public final class TonInstance {
                                 subscriber.putError(.messageTooLong)
                             } else if error.text.hasPrefix("NOT_ENOUGH_FUNDS") {
                                 subscriber.putError(.notEnoughFunds)
+                            } else if error.text.hasPrefix("MESSAGE_ENCRYPTION") {
+                                subscriber.putError(.canNotSendEncryptedMessage)
                             } else if isTextNetworkError(error.text) {
                                 subscriber.putError(.network)
                             } else {
@@ -1139,6 +1147,7 @@ public enum SendGramsFromWalletError {
     case destinationIsNotInitialized
     case messageTooLong
     case notEnoughFunds
+    case canNotSendEncryptedMessage
     case network
 }
 
@@ -1159,16 +1168,16 @@ public func verifySendGramsRequestAndEstimateFees(tonInstance: TonInstance, wall
         let query: TONPreparedSendGramsQuery
         let canNotEncryptComment: Bool
     }
-    return tonInstance.prepareFakeSendGramsFromWalletQuery(walletInfo: walletInfo, fromAddress: walletInfo.address, toAddress: toAddress, amount: amount, comment: comment, encryptComment: false, forceIfDestinationNotInitialized: false, timeout: timeout)
+    return tonInstance.prepareFakeSendGramsFromWalletQuery(walletInfo: walletInfo, fromAddress: walletInfo.address, toAddress: toAddress, amount: amount, comment: comment, encryptComment: encryptComment, forceIfDestinationNotInitialized: false, timeout: timeout)
     |> map { query -> QueryWithInfo in
         return QueryWithInfo(query: query, canNotEncryptComment: false)
     }
     |> `catch` { error -> Signal<QueryWithInfo, SendGramsFromWalletError> in
         switch error {
-        case .destinationIsNotInitialized:
+        case .destinationIsNotInitialized, .canNotSendEncryptedMessage:
             return tonInstance.prepareFakeSendGramsFromWalletQuery(walletInfo: walletInfo, fromAddress: walletInfo.address, toAddress: toAddress, amount: amount, comment: comment, encryptComment: false, forceIfDestinationNotInitialized: true, timeout: timeout)
             |> map { query -> QueryWithInfo in
-                return QueryWithInfo(query: query, canNotEncryptComment: encryptComment)
+                return QueryWithInfo(query: query, canNotEncryptComment: true)
             }
         default:
             return .fail(error)
