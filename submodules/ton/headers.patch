@@ -1,0 +1,29 @@
+diff --git a/tonlib/CMakeLists.txt b/tonlib/CMakeLists.txt
+index ae5bbe8..533dcfb 100644
+--- a/tonlib/CMakeLists.txt
++++ b/tonlib/CMakeLists.txt
+@@ -143,6 +143,8 @@ install(TARGETS tdnet keys crc32c tdactor adnllite tl_api tl-utils tl_lite_api t
+ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/tonlib/Client.h DESTINATION include/tonlib/)
+ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tl/generate/auto/tl/tonlib_api.h DESTINATION include/auto/tl/)
+ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tl/tl/TlObject.h DESTINATION include/tl/)
++install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../crypto/common/bitstring.h DESTINATION include/crypto/common)
++install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../crypto/common/refcnt.hpp DESTINATION include/common)
+ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/int_types.h DESTINATION include/td/utils/)
+ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/Slice-decl.h DESTINATION include/td/utils/)
+ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/Slice.h DESTINATION include/td/utils/)
+@@ -150,7 +152,15 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/common.h DESTINATI
+ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/unique_ptr.h DESTINATION include/td/utils/)
+ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/check.h DESTINATION include/td/utils/)
+ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/SharedSlice.h DESTINATION include/td/utils/)
++install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/bits.h DESTINATION include/td/utils/)
++install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/Destructor.h DESTINATION include/td/utils/)
++install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/MovableValue.h DESTINATION include/td/utils/)
++install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/StackAllocator.h DESTINATION include/td/utils/)
++install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/StringBuilder.h DESTINATION include/td/utils/)
++install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/logging.h DESTINATION include/td/utils/)
+ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/port/platform.h DESTINATION include/td/utils/port)
++install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/port/config.h DESTINATION include/td/utils/port)
++install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../tdutils/td/utils/port/thread_local.h DESTINATION include/td/utils/port)
+ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/../tdutils/td/utils/config.h DESTINATION include/td/utils/)
+ endif()
+ 

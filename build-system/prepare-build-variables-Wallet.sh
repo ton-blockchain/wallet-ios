@@ -28,6 +28,7 @@ prepare_build_variables () {
 		WALLET_APP_VERSION \
 		WALLET_BUNDLE_ID \
 		WALLET_DEVELOPMENT_TEAM \
+		OPENSSL_PATH \
 	)
 
 	local MISSING_VARIABLES="0"
@@ -52,6 +53,8 @@ prepare_build_variables () {
 	echo "wallet_bundle_id = \"$WALLET_BUNDLE_ID\"" >> "$VARIABLES_PATH"	
 	echo "wallet_api_id = \"$WALLET_API_ID\"" >> "$VARIABLES_PATH"
 	echo "wallet_team_id = \"$WALLET_DEVELOPMENT_TEAM\"" >> "$VARIABLES_PATH"
+
+	echo "local_openssl_path = \"$OPENSSL_PATH\"" >> "$VARIABLES_PATH"
 
 	echo "telegram_api_id = \"1\"" >> "$VARIABLES_PATH"
 	echo "telegram_api_hash = \"1\"" >> "$VARIABLES_PATH"

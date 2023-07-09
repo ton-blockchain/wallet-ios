@@ -20,6 +20,11 @@ if [ "$BAZEL_VERSION" != "$REQUIRED_BAZEL_VERSION" ]; then
 	exit 1
 fi
 
+if ["$OPENSSL_PATH" == ""]; then 
+	echo "Set OPENSSL_PATH to the local dir of OpenSSL 1.1 library\nExample: export OPENSSL_PATH=\"/opt/homebrew/Cellar/openssl@1.1/1.1.1u\""
+	exit 1
+fi
+
 if [ "$DEVELOPMENT_CODE_SIGN_IDENTITY" == "" ]; then
 	echo "Set DEVELOPMENT_CODE_SIGN_IDENTITY to the name of a valid development certificate\nExample: export DEVELOPMENT_CODE_SIGN_IDENTITY=\"iPhone Developer: XXXXXXXXXX (XXXXXXXXXX)\""
 	exit 1
@@ -62,6 +67,7 @@ if [ "$BUILD_NUMBER" == "" ]; then
 	exit 1
 fi
 
+export OPENSSL_PATH="$OPENSSL_PATH"
 export DEVELOPMENT_CODE_SIGN_IDENTITY="$DEVELOPMENT_CODE_SIGN_IDENTITY"
 export DISTRIBUTION_CODE_SIGN_IDENTITY="$DISTRIBUTION_CODE_SIGN_IDENTITY"
 export WALLET_DEVELOPMENT_TEAM="$WALLET_DEVELOPMENT_TEAM"

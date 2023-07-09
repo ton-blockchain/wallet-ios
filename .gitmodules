@@ -12,4 +12,4 @@
 	url = https://github.com/bazelbuild/apple_support.git
 [submodule "submodules/ton/tonlib-src"]
 	path = submodules/ton/tonlib-src
-	url = https://github.com/trm-dev/ton.git
+	url = git@github.com:ton-blockchain/ton.git
