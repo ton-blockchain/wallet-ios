@@ -62,6 +62,7 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
     case addressInfo(WalletTheme, String)
     case commentHeader(WalletTheme, String)
     case comment(WalletTheme, String, String, Bool)
+    case encryptComment(WalletTheme, String, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -69,7 +70,7 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
             return WalletSendScreenSection.amount.rawValue
         case .addressHeader, .address, .addressInfo:
             return WalletSendScreenSection.address.rawValue
-        case .commentHeader, .comment:
+        case .commentHeader, .comment, .encryptComment:
             return WalletSendScreenSection.comment.rawValue
         }
     }
@@ -90,6 +91,8 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
             return 5
         case .comment:
             return 6
+        case .encryptComment:
+            return 7
         }
     }
     
@@ -133,6 +136,12 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
             }
         case let .comment(lhsTheme, lhsPlaceholder, lhsText, lhsSendEnabled):
             if case let .comment(rhsTheme, rhsPlaceholder, rhsText, rhsSendEnabled) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsText == rhsText, lhsSendEnabled == rhsSendEnabled {
+                return true
+            } else {
+                return false
+            }
+        case let .encryptComment(lhsTheme, lhsTitle, lhsValue):
+            if case let .encryptComment(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme == rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
                 return true
             } else {
                 return false
@@ -254,7 +263,16 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
                 }
             }, tag: WalletSendScreenEntryTag.comment, action: {
                 if sendEnabled {
+                    arguments.dismissInput()
                     arguments.proceed()
+                }
+            })
+        case let .encryptComment(theme, title, value):
+            return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateState { state in
+                    var state = state
+                    state.encrypted = value
+                    return state
                 }
             })
         }
@@ -265,6 +283,7 @@ private struct WalletSendScreenState: Equatable {
     var address: String
     var amount: String
     var comment: String
+    var encrypted: Bool
 }
 
 private func walletSendScreenEntries(presentationData: WalletPresentationData, balance: Int64?, state: WalletSendScreenState, sendEnabled: Bool) -> [WalletSendScreenEntry] {
@@ -284,6 +303,7 @@ private func walletSendScreenEntries(presentationData: WalletPresentationData, b
         
     entries.append(.commentHeader(presentationData.theme, presentationData.strings.Wallet_Receive_CommentHeader))
     entries.append(.comment(presentationData.theme, presentationData.strings.Wallet_Receive_CommentInfo, state.comment, sendEnabled))
+    entries.append(.encryptComment(presentationData.theme, presentationData.strings.Wallet_Send_EncryptComment, state.encrypted))
     
     return entries
 }
@@ -296,10 +316,10 @@ private final class WalletSendScreenImpl: ItemListController, WalletSendScreen {
     
 }
 
-public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo: WalletInfo, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, address: String? = nil, amount: Int64? = nil, comment: String? = nil) -> ViewController {    
+public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo: WalletInfo, blockchainNetwork: LocalWalletConfiguration.ActiveNetwork, address: String? = nil, amount: Int64? = nil, comment: String? = nil, encryptedComment: Bool = false) -> ViewController {
     let presentationData = context.presentationData
    
-    let initialState = WalletSendScreenState(address: address ?? "", amount: amount.flatMap { formatBalanceText($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) } ?? "", comment: comment ?? "")
+    let initialState = WalletSendScreenState(address: address ?? "", amount: amount.flatMap { formatBalanceText($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) } ?? "", comment: comment ?? "", encrypted: encryptedComment)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((WalletSendScreenState) -> WalletSendScreenState) -> Void = { f in
@@ -394,7 +414,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
             let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             presentControllerImpl?(controller, nil)
             
-            let _ = (verifySendGramsRequestAndEstimateFees(tonInstance: context.tonInstance, walletInfo: walletInfo, toAddress: destinationAddress, amount: amount, comment: commentData ?? Data(), encryptComment: false, timeout: 0)
+            let _ = (verifySendGramsRequestAndEstimateFees(tonInstance: context.tonInstance, walletInfo: walletInfo, toAddress: destinationAddress, amount: amount, comment: commentData ?? Data(), encryptComment: state.encrypted, timeout: 0)
             |> deliverOnMainQueue).start(next: { [weak controller] verificationResult in
                 controller?.dismiss()
                 
@@ -414,9 +434,11 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
                     }
                 }
                 
+                var effectiveCommentEncrypted = state.encrypted
                 if verificationResult.canNotEncryptComment {
                     //TODO:localize
-                    attributedText.append(NSAttributedString(string: "\n\nNote: Your comment will not be encrypted", font: Font.regular(13.0), textColor: presentationData.theme.list.itemDestructiveColor))
+                    effectiveCommentEncrypted = false
+                    attributedText.append(NSAttributedString(string: "\n\nThe destination wallet is not initialized. The comment will be sent unencrypted.", font: Font.regular(13.0), textColor: presentationData.theme.list.itemDestructiveColor))
                 }
                 
                 var dismissAlertImpl: ((Bool) -> Void)?
@@ -455,7 +477,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
                     |> deliverOnMainQueue).start(next: { serverSalt in
                         if let serverSalt = serverSalt {
                             if let commentData = state.comment.data(using: .utf8) {
-                                pushImpl?(WalletSplashScreen(context: context, blockchainNetwork: blockchainNetwork, mode: .sending(WalletSplashModeSending(walletInfo: walletInfo, address: state.address, amount: amount, comment: commentData, encryptComment: false, randomId: randomId, serverSalt: serverSalt)), walletCreatedPreloadState: nil))
+                                pushImpl?(WalletSplashScreen(context: context, blockchainNetwork: blockchainNetwork, mode: .sending(WalletSplashModeSending(walletInfo: walletInfo, address: state.address, amount: amount, comment: commentData, encryptComment: effectiveCommentEncrypted, randomId: randomId, serverSalt: serverSalt)), walletCreatedPreloadState: nil))
                             }
                         }
                     })
@@ -485,7 +507,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
                 case .notEnoughFunds:
                     title = presentationData.strings.Wallet_Send_ErrorNotEnoughFundsTitle
                     text = presentationData.strings.Wallet_Send_ErrorNotEnoughFundsText
-                case .messageTooLong:
+                case .messageTooLong, .canNotSendEncryptedMessage:
                     text = presentationData.strings.Wallet_UnknownError
                 case .invalidAddress:
                     text = presentationData.strings.Wallet_Send_ErrorInvalidAddress
@@ -572,6 +594,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
             sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= walletState.effectiveAvailableBalance && textLength <= walletTextLimit
 
             rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Send_Send), style: .bold, enabled: sendEnabled, action: {
+                arguments.dismissInput()
                 arguments.proceed()
             })
         } else {

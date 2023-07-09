@@ -302,7 +302,7 @@ public final class WalletSplashScreen: ViewController {
             case .notEnoughFunds:
                 title = strongSelf.presentationData.strings.Wallet_Send_ErrorNotEnoughFundsTitle
                 text = strongSelf.presentationData.strings.Wallet_Send_ErrorNotEnoughFundsText
-            case .messageTooLong:
+            case .messageTooLong, .canNotSendEncryptedMessage:
                 text = strongSelf.presentationData.strings.Wallet_UnknownError
             case .invalidAddress:
                 text = strongSelf.presentationData.strings.Wallet_Send_ErrorInvalidAddress
